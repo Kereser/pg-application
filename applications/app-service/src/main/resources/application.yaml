@@ -1,0 +1,84 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: "application-service"
+  devtools:
+    add-properties: false
+  h2:
+    console:
+      enabled: true
+      path: "/h2"
+  flyway:
+    url: "jdbc:postgresql://${adapters.r2dbc.host}:${adapters.r2dbc.port}/${adapters.r2dbc.database}"
+    user: "${adapters.r2dbc.username}"
+    password: "${adapters.r2dbc.password}"
+  profiles:
+    include: null
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,prometheus,mappings"
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    circuitbreakers:
+      enabled: true
+
+cors:
+  allowed-origins: "http://localhost:4200,http://localhost:8080"
+
+routes:
+  paths:
+    base: "/api/v1"
+    application: "/applications"
+
+adapters:
+  r2dbc:
+    host: "localhost"
+    port: 5432
+    database: "application"
+    username: "crediya"
+    password: "P@55w0rd"
+
+adapter:
+  restconsumer:
+    timeout: 5000
+    url: "http://localhost:8080/api/v1/users"
+
+logging:
+  level:
+    org:
+      springframework:
+        web:
+          reactive:
+            function:
+              client:
+                ExchangeFunctions: TRACE
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      findUserByIdNumber:
+        registerHealthIndicator: true
+        failureRateThreshold: 50
+        slowCallRateThreshold: 50
+        slowCallDurationThreshold: "2s"
+        permittedNumberOfCallsInHalfOpenState: 3
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 10
+        waitDurationInOpenState: "10s"
+      testPost:
+        registerHealthIndicator: true
+        failureRateThreshold: 50
+        slowCallRateThreshold: 50
+        slowCallDurationThreshold: "2s"
+        permittedNumberOfCallsInHalfOpenState: 3
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 10
+        waitDurationInOpenState: "10s"
