@@ -6,6 +6,7 @@ buildscript {
 		jacocoVersion = '0.8.13'
 		pitestVersion = '1.19.0-rc.1'
         lombokVersion = '1.18.38'
+        spotlessVersion = '6.25.0'
 	}
 }
 
@@ -13,6 +14,7 @@ plugins {
 	id 'co.com.bancolombia.cleanArchitecture' version "${cleanArchitectureVersion}"
 	id 'org.springframework.boot' version "${springBootVersion}" apply false
 	id 'info.solidsoft.pitest' version "${pitestVersion}" apply false
+    id "com.diffplug.spotless" version "${spotlessVersion}"
 	id 'org.sonarqube' version "${sonarVersion}"
 	id 'jacoco'
 }
