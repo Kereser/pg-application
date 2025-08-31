@@ -1,15 +1,25 @@
 package co.com.crediya.application.usecase.createapplication;
 
+import static co.com.crediya.application.usecase.createapplication.DataUtils.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -23,10 +33,14 @@ import co.com.crediya.application.model.auth.UserSummary;
 import co.com.crediya.application.model.auth.gateway.AuthGateway;
 import co.com.crediya.application.model.dto.ApplicationDTOResponse;
 import co.com.crediya.application.model.dto.CreateApplicationCommand;
+import co.com.crediya.application.model.exceptions.EntityNotFoundException;
 import co.com.crediya.application.model.exceptions.IllegalValueForArgumentException;
+import co.com.crediya.application.model.exceptions.ResourceOwnershipException;
 import co.com.crediya.application.model.mapper.ApplicationMapper;
 import co.com.crediya.application.model.producttype.ProductType;
 import co.com.crediya.application.model.producttype.gateways.ProductTypeRepository;
+import co.com.crediya.application.model.security.SecurityDetails;
+import co.com.crediya.application.model.security.SecurityGateway;
 import reactor.blockhound.BlockHound;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -40,8 +54,11 @@ class CreateApplicationUseCaseImpTest {
   @Mock private ApplicationRepository applicationRepository;
   @Mock private ProductTypeRepository productTypeRepository;
   @Mock private ApplicationStatusRepository appStatusRepository;
+  @Mock private SecurityGateway securityGateway;
   @Mock private ApplicationMapper mapper;
   @Mock private AuthGateway authClient;
+
+  @Captor ArgumentCaptor<Application> captor;
 
   @InjectMocks private CreateApplicationUseCaseImp createApplicationUseCase;
 
@@ -50,36 +67,47 @@ class CreateApplicationUseCaseImpTest {
   private ProductType productType;
   private ApplicationStatus applicationStatus;
   private Application applicationToSave;
-  private Application savedApplication;
   private ApplicationDTOResponse responseDTO;
+  private SecurityDetails securityDetails;
 
-  BigDecimal amount = new BigDecimal("5000");
-  String vehicleLoanStr = "VEHICLE_INVERSION";
+  BigDecimal amount = new BigDecimal(5_000_000);
+  BigDecimal minVal = new BigDecimal(1_000_000);
+  BigDecimal maxVal = new BigDecimal(200_000_000);
+  String loanType = "VEHICLE_INVERSION";
 
   @BeforeEach
   void setUp() {
-    command = new CreateApplicationCommand("123332", amount, 12, vehicleLoanStr);
+    command =
+        new CreateApplicationCommand(
+            randomIdNumber(), randomBigDecimal(), randomInt(5, 20), loanType);
 
-    userSummary = new UserSummary(UUID.randomUUID(), "12345", "test@test.com", "CC", "123456");
+    userSummary =
+        new UserSummary(
+            UUID.randomUUID(), randomEmail(), randomName(), randomIdType(), randomIdNumber());
     productType =
         ProductType.builder()
             .id(UUID.randomUUID())
-            .name("CREDITO_LIBRE_INVERSION")
-            .minAmount(new BigDecimal("1000"))
-            .maxAmount(new BigDecimal("10000"))
+            .name(loanType)
+            .minAmount(minVal)
+            .maxAmount(maxVal)
             .build();
     applicationStatus = new ApplicationStatus(UUID.randomUUID(), "PENDING", "Pending");
 
     applicationToSave = Application.builder().amount(new Amount(amount)).build();
-    savedApplication = applicationToSave.toBuilder().id(UUID.randomUUID()).build();
+    Application savedApplication =
+        applicationToSave.toBuilder().id(UUID.randomUUID()).userId(userSummary.id()).build();
 
     responseDTO =
         new ApplicationDTOResponse(
             savedApplication.getId(),
             amount,
-            UUID.randomUUID(),
+            savedApplication.getUserId(),
             UUID.randomUUID(),
             UUID.randomUUID());
+
+    securityDetails =
+        new SecurityDetails(
+            savedApplication.getUserId(), new ArrayList<>(Collections.singleton(randomName())));
   }
 
   @Test
@@ -89,17 +117,22 @@ class CreateApplicationUseCaseImpTest {
     when(authClient.findUserByIdNumber(anyString())).thenReturn(Mono.just(userSummary));
     when(productTypeRepository.findByName(anyString())).thenReturn(Mono.just(productType));
     when(appStatusRepository.findPending()).thenReturn(Mono.just(applicationStatus));
+    when(securityGateway.getDetailsFromContext()).thenReturn(Mono.just(securityDetails));
 
     when(applicationRepository.save(any(Application.class)))
-        .thenReturn(Mono.just(savedApplication));
+        .thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
 
-    when(mapper.toDTO(savedApplication)).thenReturn(responseDTO);
+    when(mapper.toDTO(any(Application.class))).thenReturn(responseDTO);
 
     Mono<ApplicationDTOResponse> resultMono = createApplicationUseCase.execute(command);
-
     StepVerifier.create(resultMono).expectNext(responseDTO).verifyComplete();
 
-    verify(applicationRepository).save(any(Application.class));
+    verify(applicationRepository).save(captor.capture());
+    Application appToSave = captor.getValue();
+
+    assertThat(appToSave.getProductType()).isEqualTo(productType);
+    assertThat(appToSave.getApplicationStatus()).isEqualTo(applicationStatus);
+    assertThat(appToSave.getUserId()).isEqualTo(userSummary.id());
   }
 
   @Test
@@ -118,25 +151,79 @@ class CreateApplicationUseCaseImpTest {
     verify(applicationRepository, never()).save(any(Application.class));
   }
 
-  @Test
-  void shouldReturnErrorWhenAmountValidationFails() {
-    ProductType productWithInvalidLimits =
-        ProductType.builder()
-            .minAmount(new BigDecimal("6000"))
-            .maxAmount(new BigDecimal("10000"))
-            .build();
+  @ParameterizedTest
+  @MethodSource("invalidAmountProvider")
+  void shouldReturnErrorWhenAmountValidationFails(ProductType pType) {
 
     when(mapper.toEntityCommand(command)).thenReturn(applicationToSave);
 
     when(authClient.findUserByIdNumber(anyString())).thenReturn(Mono.just(userSummary));
-    when(productTypeRepository.findByName(anyString()))
-        .thenReturn(Mono.just(productWithInvalidLimits));
     when(appStatusRepository.findPending()).thenReturn(Mono.just(applicationStatus));
+
+    when(productTypeRepository.findByName(anyString())).thenReturn(Mono.just(pType));
+
+    when(securityGateway.getDetailsFromContext()).thenReturn(Mono.just(securityDetails));
 
     Mono<ApplicationDTOResponse> resultMono = createApplicationUseCase.execute(command);
 
     StepVerifier.create(resultMono).expectError(IllegalValueForArgumentException.class).verify();
 
     verify(applicationRepository, never()).save(any(Application.class));
+  }
+
+  @Test
+  void shouldReturnErrorWhenOwnershipInvalid() {
+    when(mapper.toEntityCommand(command)).thenReturn(applicationToSave);
+
+    when(authClient.findUserByIdNumber(anyString())).thenReturn(Mono.just(userSummary));
+    when(productTypeRepository.findByName(anyString())).thenReturn(Mono.just(productType));
+    when(appStatusRepository.findPending()).thenReturn(Mono.just(applicationStatus));
+    when(securityGateway.getDetailsFromContext())
+        .thenReturn(
+            Mono.just(
+                new SecurityDetails(
+                    UUID.randomUUID(),
+                    new ArrayList<>() {
+                      {
+                        add(randomName());
+                      }
+                    })));
+
+    Mono<ApplicationDTOResponse> resMono = createApplicationUseCase.execute(command);
+
+    StepVerifier.create(resMono).expectError(ResourceOwnershipException.class).verify();
+
+    verify(applicationRepository, never()).save(any(Application.class));
+  }
+
+  @Test
+  void shouldReturnErrorWhenSecContextNotFound() {
+    when(mapper.toEntityCommand(command)).thenReturn(applicationToSave);
+
+    when(authClient.findUserByIdNumber(anyString())).thenReturn(Mono.just(userSummary));
+    when(productTypeRepository.findByName(anyString())).thenReturn(Mono.just(productType));
+    when(appStatusRepository.findPending()).thenReturn(Mono.just(applicationStatus));
+    when(securityGateway.getDetailsFromContext()).thenReturn(Mono.empty());
+
+    Mono<ApplicationDTOResponse> resMono = createApplicationUseCase.execute(command);
+
+    StepVerifier.create(resMono).expectError(EntityNotFoundException.class).verify();
+
+    verify(applicationRepository, never()).save(any(Application.class));
+  }
+
+  private static Stream<Arguments> invalidAmountProvider() {
+    BigDecimal baseAmount = new BigDecimal(10_000_000);
+
+    ProductType produceMinValError =
+        ProductType.builder()
+            .minAmount(baseAmount)
+            .maxAmount(baseAmount.add(BigDecimal.TEN))
+            .build();
+
+    ProductType producteMaxValError =
+        ProductType.builder().minAmount(BigDecimal.ONE).maxAmount(BigDecimal.TEN).build();
+
+    return Stream.of(Arguments.of(produceMinValError), Arguments.of(producteMaxValError));
   }
 }

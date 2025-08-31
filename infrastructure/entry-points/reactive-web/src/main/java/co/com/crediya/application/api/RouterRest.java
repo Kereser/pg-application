@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
-import co.com.crediya.application.api.config.ApplicationPath;
+import co.com.crediya.application.api.config.Routes;
 import co.com.crediya.application.api.dto.CreateApplicationDTORequest;
 import co.com.crediya.application.api.exceptions.ErrorResponseDTO;
 import co.com.crediya.application.model.dto.ApplicationDTOResponse;
@@ -26,7 +26,7 @@ import lombok.AllArgsConstructor;
 @Configuration
 @AllArgsConstructor
 public class RouterRest {
-  private final ApplicationPath applicationPath;
+  private final Routes routes;
   private final Handler applicationHandler;
 
   @Bean
@@ -82,10 +82,10 @@ public class RouterRest {
   public RouterFunction<ServerResponse> routerFunction(Handler handler) {
     return route()
         .path(
-            applicationPath.getBase(),
+            routes.getPaths().getBase(),
             builder ->
                 builder.POST(
-                    applicationPath.getApplication(), applicationHandler::listenSaveApplication))
+                    routes.getPaths().getApplication(), applicationHandler::listenSaveApplication))
         .build();
   }
 }

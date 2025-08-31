@@ -36,7 +36,7 @@ public class ProductTypeRepositoryAdapter
         .map(super::toEntity)
         .as(txOperator::transactional)
         .doOnSubscribe(sub -> log.info("Find product for name: {}", name))
-        .doOnSubscribe(res -> log.info("Found product type by name: {}. Res: {}", name, res))
+        .doOnSuccess(res -> log.info("Found product type by name: {}. Res: {}", name, res))
         .doOnError(
             err ->
                 log.error(

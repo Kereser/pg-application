@@ -1,0 +1,20 @@
+package co.com.crediya.application.api.config;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+@ConfigurationProperties(prefix = "routes")
+public class Routes {
+  private Paths paths;
+
+  @Getter
+  @Setter
+  public static class Paths {
+    private String base;
+    private String application;
+  }
+}

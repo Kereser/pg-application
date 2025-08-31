@@ -33,6 +33,9 @@ management:
 cors:
   allowed-origins: "http://localhost:4200,http://localhost:8080"
 
+jwt:
+  secret: Sikret00-2$$_32.,/>>/SfgdskjlXDSF<>????94534906--=_+)I-w=5243=0-59=4+_)I*(+
+
 routes:
   paths:
     base: "/api/v1"
