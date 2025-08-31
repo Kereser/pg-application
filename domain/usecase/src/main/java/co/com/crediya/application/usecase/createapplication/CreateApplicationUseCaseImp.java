@@ -1,6 +1,7 @@
 package co.com.crediya.application.usecase.createapplication;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 import co.com.crediya.application.model.application.Application;
 import co.com.crediya.application.model.application.gateways.ApplicationRepository;
@@ -12,13 +13,12 @@ import co.com.crediya.application.model.auth.UserSummary;
 import co.com.crediya.application.model.auth.gateway.AuthGateway;
 import co.com.crediya.application.model.dto.ApplicationDTOResponse;
 import co.com.crediya.application.model.dto.CreateApplicationCommand;
-import co.com.crediya.application.model.exceptions.Fields;
-import co.com.crediya.application.model.exceptions.IllegalValueForArgumentException;
-import co.com.crediya.application.model.exceptions.TemplateErrors;
+import co.com.crediya.application.model.exceptions.*;
 import co.com.crediya.application.model.mapper.ApplicationMapper;
 import co.com.crediya.application.model.producttype.ProductType;
 import co.com.crediya.application.model.producttype.gateways.ProductTypeRepository;
 import co.com.crediya.application.model.producttype.vo.ProductName;
+import co.com.crediya.application.model.security.SecurityGateway;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 
@@ -28,6 +28,7 @@ public class CreateApplicationUseCaseImp implements CreateApplicationUseCase {
   private final ApplicationRepository applicationRepository;
   private final ProductTypeRepository productTypeRepository;
   private final ApplicationStatusRepository appStatusRepository;
+  private final SecurityGateway securityGateway;
   private final ApplicationMapper mapper;
   private final AuthGateway authClient;
 
@@ -39,16 +40,40 @@ public class CreateApplicationUseCaseImp implements CreateApplicationUseCase {
     Application application = mapper.toEntityCommand(command);
 
     return Mono.zip(findUser(idNumber), findProduct(productName), findDefaultStatus())
-        .doOnNext(tuple -> runAmountValidation(tuple.getT2(), application))
-        .map(
+        .flatMap(
             tuple ->
-                this.buildApplication(tuple.getT1(), tuple.getT2(), tuple.getT3(), application))
+                validateResourceOwnership(tuple.getT1().id())
+                    .then(
+                        Mono.defer(
+                            () -> {
+                              runAmountValidation(tuple.getT2(), application);
+
+                              return Mono.just(
+                                  this.buildApplication(
+                                      tuple.getT1(), tuple.getT2(), tuple.getT3(), application));
+                            })))
         .flatMap(applicationRepository::save)
         .map(mapper::toDTO);
   }
 
   private Mono<UserSummary> findUser(IdNumber idNumber) {
     return authClient.findUserByIdNumber(idNumber.value());
+  }
+
+  private Mono<Void> validateResourceOwnership(UUID reqUserId) {
+    return this.securityGateway
+        .getDetailsFromContext()
+        .switchIfEmpty(
+            Mono.error(
+                new EntityNotFoundException(
+                    Entities.SECURITY_CONTEXT.name(), PlainErrors.NOT_EMPY.getName())))
+        .flatMap(
+            usrDetails ->
+                usrDetails.userId().equals(reqUserId)
+                    ? Mono.empty()
+                    : Mono.error(
+                        new ResourceOwnershipException(
+                            Fields.USER_ID.getName(), PlainErrors.OWNERSHIP.getName())));
   }
 
   private Mono<ProductType> findProduct(ProductName productName) {
