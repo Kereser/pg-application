@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import co.com.crediya.application.model.exceptions.EntityNotFoundException;
 import co.com.crediya.application.model.exceptions.IllegalValueForArgumentException;
 import co.com.crediya.application.model.exceptions.MissingValueOnRequiredFieldException;
+import co.com.crediya.application.model.exceptions.ResourceOwnershipException;
 
 @Configuration
 public class ExceptionConfig {
@@ -22,7 +23,9 @@ public class ExceptionConfig {
         IllegalValueForArgumentException.class,
         HttpStatus.BAD_REQUEST,
         EntityNotFoundException.class,
-        HttpStatus.NOT_FOUND);
+        HttpStatus.NOT_FOUND,
+        ResourceOwnershipException.class,
+        HttpStatus.FORBIDDEN);
   }
 
   @Bean
