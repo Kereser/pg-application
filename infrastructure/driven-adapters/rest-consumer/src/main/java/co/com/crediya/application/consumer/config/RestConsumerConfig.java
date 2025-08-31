@@ -9,6 +9,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.web.reactive.function.client.ClientRequest;
+import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import io.netty.handler.timeout.ReadTimeoutHandler;
@@ -19,8 +24,8 @@ import reactor.netty.http.client.HttpClient;
 public class RestConsumerConfig {
 
   private final String url;
-
   private final int timeout;
+  private static final String BEARER = "Bearer ";
 
   public RestConsumerConfig(
       @Value("${adapter.restconsumer.url}") String url,
@@ -35,7 +40,31 @@ public class RestConsumerConfig {
         .baseUrl(url)
         .defaultHeader(HttpHeaders.CONTENT_TYPE, "application/json")
         .clientConnector(getClientHttpConnector())
+        .filter(authHandlerFiler())
         .build();
+  }
+
+  @Bean
+  public ExchangeFilterFunction authHandlerFiler() {
+    return (clientRequest, next) ->
+        ReactiveSecurityContextHolder.getContext()
+            .flatMap(
+                securityContext -> {
+                  Authentication authentication = securityContext.getAuthentication();
+
+                  if (authentication instanceof UsernamePasswordAuthenticationToken
+                      && authentication.getDetails() instanceof String token) {
+                    ClientRequest authorizedRequest =
+                        ClientRequest.from(clientRequest)
+                            .header(HttpHeaders.AUTHORIZATION, BEARER + token)
+                            .build();
+
+                    return next.exchange(authorizedRequest);
+                  }
+
+                  return next.exchange(clientRequest);
+                })
+            .switchIfEmpty(next.exchange(clientRequest));
   }
 
   private ClientHttpConnector getClientHttpConnector() {
