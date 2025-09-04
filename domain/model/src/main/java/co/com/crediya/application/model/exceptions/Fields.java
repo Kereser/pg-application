@@ -10,6 +10,7 @@ public enum Fields {
   PRODUCT_NAME("Product name"),
   ID_NUMBER("Id number"),
   USER_ID("User id"),
+  APPLICATION_STATUS_NAME("Application status name"),
   APPLICATION_PERIOD("Application period");
 
   private final String name;
