@@ -1,16 +1,19 @@
 package co.com.crediya.application.r2dbc.applicationstatus;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.reactive.TransactionalOperator;
 
 import co.com.crediya.application.model.applicationstatus.ApplicationStatus;
+import co.com.crediya.application.model.applicationstatus.ApplicationStatusName;
 import co.com.crediya.application.model.applicationstatus.gateways.ApplicationStatusRepository;
 import co.com.crediya.application.r2dbc.applicationstatus.mapper.ApplicationStatusMapperStandard;
 import co.com.crediya.application.r2dbc.entity.ApplicationStatusEntity;
 import co.com.crediya.application.r2dbc.helper.ReactiveAdapterOperations;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Repository
@@ -30,9 +33,19 @@ public class ApplicationStatusRepositoryAdapter
   }
 
   @Override
-  public Mono<ApplicationStatus> findPending() {
+  public Flux<ApplicationStatus> findAllByNameIn(List<ApplicationStatusName> nameList) {
+    List<String> nameStrList = nameList.stream().map(String::valueOf).toList();
+
     return repository
-        .findPending()
+        .findAllByNameIn(nameStrList)
+        .map(super::toEntity)
+        .as(txOperator::transactional);
+  }
+
+  @Override
+  public Mono<ApplicationStatus> findByName(ApplicationStatusName statusName) {
+    return repository
+        .findByName(statusName.getName())
         .map(super::toEntity)
         .as(txOperator::transactional)
         .doOnSubscribe(sub -> log.info("Getting pending application status obj"))
