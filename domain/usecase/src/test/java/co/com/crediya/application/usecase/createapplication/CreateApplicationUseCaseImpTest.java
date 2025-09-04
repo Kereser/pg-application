@@ -28,6 +28,7 @@ import co.com.crediya.application.model.application.Application;
 import co.com.crediya.application.model.application.gateways.ApplicationRepository;
 import co.com.crediya.application.model.application.vo.Amount;
 import co.com.crediya.application.model.applicationstatus.ApplicationStatus;
+import co.com.crediya.application.model.applicationstatus.ApplicationStatusName;
 import co.com.crediya.application.model.applicationstatus.gateways.ApplicationStatusRepository;
 import co.com.crediya.application.model.auth.UserSummary;
 import co.com.crediya.application.model.auth.gateway.AuthGateway;
@@ -83,7 +84,12 @@ class CreateApplicationUseCaseImpTest {
 
     userSummary =
         new UserSummary(
-            UUID.randomUUID(), randomEmail(), randomName(), randomIdType(), randomIdNumber());
+            UUID.randomUUID(),
+            randomEmail(),
+            randomBigDecimal(),
+            randomName(),
+            randomIdType(),
+            randomIdNumber());
     productType =
         ProductType.builder()
             .id(UUID.randomUUID())
@@ -91,7 +97,8 @@ class CreateApplicationUseCaseImpTest {
             .minAmount(minVal)
             .maxAmount(maxVal)
             .build();
-    applicationStatus = new ApplicationStatus(UUID.randomUUID(), "PENDING", "Pending");
+    applicationStatus =
+        new ApplicationStatus(UUID.randomUUID(), ApplicationStatusName.PENDING, "Pending");
 
     applicationToSave = Application.builder().amount(new Amount(amount)).build();
     Application savedApplication =
@@ -116,7 +123,8 @@ class CreateApplicationUseCaseImpTest {
 
     when(authClient.findUserByIdNumber(anyString())).thenReturn(Mono.just(userSummary));
     when(productTypeRepository.findByName(anyString())).thenReturn(Mono.just(productType));
-    when(appStatusRepository.findPending()).thenReturn(Mono.just(applicationStatus));
+    when(appStatusRepository.findByName(ApplicationStatusName.PENDING))
+        .thenReturn(Mono.just(applicationStatus));
     when(securityGateway.getDetailsFromContext()).thenReturn(Mono.just(securityDetails));
 
     when(applicationRepository.save(any(Application.class)))
@@ -140,7 +148,8 @@ class CreateApplicationUseCaseImpTest {
     when(mapper.toEntityCommand(command)).thenReturn(applicationToSave);
 
     when(authClient.findUserByIdNumber(anyString())).thenReturn(Mono.just(userSummary));
-    when(appStatusRepository.findPending()).thenReturn(Mono.just(applicationStatus));
+    when(appStatusRepository.findByName(ApplicationStatusName.PENDING))
+        .thenReturn(Mono.just(applicationStatus));
 
     when(productTypeRepository.findByName(anyString())).thenReturn(Mono.empty());
 
@@ -158,7 +167,8 @@ class CreateApplicationUseCaseImpTest {
     when(mapper.toEntityCommand(command)).thenReturn(applicationToSave);
 
     when(authClient.findUserByIdNumber(anyString())).thenReturn(Mono.just(userSummary));
-    when(appStatusRepository.findPending()).thenReturn(Mono.just(applicationStatus));
+    when(appStatusRepository.findByName(ApplicationStatusName.PENDING))
+        .thenReturn(Mono.just(applicationStatus));
 
     when(productTypeRepository.findByName(anyString())).thenReturn(Mono.just(pType));
 
@@ -177,7 +187,8 @@ class CreateApplicationUseCaseImpTest {
 
     when(authClient.findUserByIdNumber(anyString())).thenReturn(Mono.just(userSummary));
     when(productTypeRepository.findByName(anyString())).thenReturn(Mono.just(productType));
-    when(appStatusRepository.findPending()).thenReturn(Mono.just(applicationStatus));
+    when(appStatusRepository.findByName(ApplicationStatusName.PENDING))
+        .thenReturn(Mono.just(applicationStatus));
     when(securityGateway.getDetailsFromContext())
         .thenReturn(
             Mono.just(
@@ -202,7 +213,8 @@ class CreateApplicationUseCaseImpTest {
 
     when(authClient.findUserByIdNumber(anyString())).thenReturn(Mono.just(userSummary));
     when(productTypeRepository.findByName(anyString())).thenReturn(Mono.just(productType));
-    when(appStatusRepository.findPending()).thenReturn(Mono.just(applicationStatus));
+    when(appStatusRepository.findByName(ApplicationStatusName.PENDING))
+        .thenReturn(Mono.just(applicationStatus));
     when(securityGateway.getDetailsFromContext()).thenReturn(Mono.empty());
 
     Mono<ApplicationDTOResponse> resMono = createApplicationUseCase.execute(command);

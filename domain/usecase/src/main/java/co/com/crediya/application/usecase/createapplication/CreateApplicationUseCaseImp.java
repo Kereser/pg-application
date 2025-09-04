@@ -8,6 +8,7 @@ import co.com.crediya.application.model.application.gateways.ApplicationReposito
 import co.com.crediya.application.model.application.vo.Amount;
 import co.com.crediya.application.model.application.vo.IdNumber;
 import co.com.crediya.application.model.applicationstatus.ApplicationStatus;
+import co.com.crediya.application.model.applicationstatus.ApplicationStatusName;
 import co.com.crediya.application.model.applicationstatus.gateways.ApplicationStatusRepository;
 import co.com.crediya.application.model.auth.UserSummary;
 import co.com.crediya.application.model.auth.gateway.AuthGateway;
@@ -39,7 +40,7 @@ public class CreateApplicationUseCaseImp implements CreateApplicationUseCase {
 
     Application application = mapper.toEntityCommand(command);
 
-    return Mono.zip(findUser(idNumber), findProduct(productName), findDefaultStatus())
+    return Mono.zip(findUser(idNumber), findProduct(productName), findPending())
         .flatMap(
             tuple ->
                 validateResourceOwnership(tuple.getT1().id())
@@ -87,8 +88,8 @@ public class CreateApplicationUseCaseImp implements CreateApplicationUseCase {
                         Fields.PRODUCT_NAME.getName(), productName))));
   }
 
-  private Mono<ApplicationStatus> findDefaultStatus() {
-    return appStatusRepository.findPending();
+  private Mono<ApplicationStatus> findPending() {
+    return appStatusRepository.findByName(ApplicationStatusName.PENDING);
   }
 
   private void runAmountValidation(ProductType productType, Application application) {

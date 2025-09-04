@@ -77,6 +77,55 @@ public class RouterRest {
                           @Content(
                               mediaType = MediaType.APPLICATION_JSON_VALUE,
                               schema = @Schema(implementation = ErrorResponse.class)))
+                })),
+    @RouterOperation(
+        path = "api/v1/applications/review",
+        produces = {"application/json"},
+        method = RequestMethod.GET,
+        beanClass = Handler.class,
+        beanMethod = "listenGetApplicationsForManualReview",
+        operation =
+            @Operation(
+                operationId = "getApplicationsForManualReview",
+                summary = "Get applications pending manual review",
+                parameters = {
+                  @io.swagger.v3.oas.annotations.Parameter(
+                      name = "page",
+                      description = "Page number",
+                      schema = @Schema(type = "integer", defaultValue = "0")),
+                  @io.swagger.v3.oas.annotations.Parameter(
+                      name = "size",
+                      description = "Page size",
+                      schema = @Schema(type = "integer", defaultValue = "2")),
+                  @io.swagger.v3.oas.annotations.Parameter(
+                      name = "userId",
+                      description = "User id to filter by",
+                      schema =
+                          @Schema(
+                              type = "string",
+                              format = "uuid",
+                              example = "550e8400-e29b-41d4-a716-446655440000")),
+                  @io.swagger.v3.oas.annotations.Parameter(
+                      name = "amount",
+                      description = "amount used to filter by",
+                      schema =
+                          @Schema(type = "number", format = "decimal", example = "1200000.50")),
+                },
+                responses = {
+                  @ApiResponse(
+                      responseCode = "200",
+                      description = "List of applications",
+                      content =
+                          @Content(
+                              mediaType = MediaType.APPLICATION_JSON_VALUE,
+                              schema = @Schema(implementation = ApplicationDTOResponse.class))),
+                  @ApiResponse(
+                      responseCode = "500",
+                      description = "Internal Server Error",
+                      content =
+                          @Content(
+                              mediaType = MediaType.APPLICATION_JSON_VALUE,
+                              schema = @Schema(implementation = ErrorResponse.class)))
                 }))
   })
   public RouterFunction<ServerResponse> routerFunction(Handler handler) {
@@ -84,8 +133,13 @@ public class RouterRest {
         .path(
             routes.getPaths().getBase(),
             builder ->
-                builder.POST(
-                    routes.getPaths().getApplication(), applicationHandler::listenSaveApplication))
+                builder
+                    .POST(
+                        routes.getPaths().getApplication(),
+                        applicationHandler::listenSaveApplication)
+                    .GET(
+                        routes.getPaths().getApplicationsToReview(),
+                        applicationHandler::listenGetApplicationsForManualReview))
         .build();
   }
 }

@@ -16,5 +16,6 @@ public class Routes {
   public static class Paths {
     private String base;
     private String application;
+    private String applicationsToReview;
   }
 }

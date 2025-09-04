@@ -8,9 +8,11 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
 
 import co.com.crediya.application.model.application.Application;
+import co.com.crediya.application.model.application.ApplicationSummary;
 import co.com.crediya.application.model.application.vo.Amount;
 import co.com.crediya.application.model.application.vo.ApplicationPeriod;
 import co.com.crediya.application.model.applicationstatus.ApplicationStatus;
+import co.com.crediya.application.model.auth.UserSummary;
 import co.com.crediya.application.model.dto.ApplicationDTOResponse;
 import co.com.crediya.application.model.dto.CreateApplicationCommand;
 import co.com.crediya.application.model.mapper.ApplicationMapper;
@@ -26,10 +28,6 @@ public interface ApplicationMapperStandard extends ApplicationMapper {
   @Mapping(target = "applicationStatus", ignore = true)
   @Mapping(target = "productType", ignore = true)
   Application toEntityCommand(CreateApplicationCommand command);
-
-  @Mapping(target = "id", source = "data.id")
-  Application toFullEntity(
-      ApplicationEntity data, ApplicationStatus applicationStatus, ProductType productType);
 
   @Mapping(target = "id", source = "data.id")
   @Mapping(
@@ -49,6 +47,16 @@ public interface ApplicationMapperStandard extends ApplicationMapper {
   @Mapping(target = "statusId", expression = "java(toStatusId(entity))")
   @Mapping(target = "productTypeId", expression = "java(toProductId(entity))")
   ApplicationDTOResponse toDTO(Application entity);
+
+  @Mapping(target = "userId", source = "application.userId")
+  @Mapping(target = "productType", source = "application.productType")
+  @Mapping(target = "status", source = "application.applicationStatus")
+  @Mapping(target = "amount", source = "application.amount.value")
+  @Mapping(target = "applicationPeriod", source = "application.applicationPeriod.value")
+  @Mapping(target = "interestRate", source = "application.productType.interestRate")
+  @Mapping(target = "totalApprovedDebt", ignore = true)
+  @Mapping(target = "name", source = "user.firstName")
+  ApplicationSummary toSummary(Application application, UserSummary user);
 
   default UUID toStatusId(Application entity) {
     return entity.getApplicationStatus().getId();

@@ -15,6 +15,6 @@ import lombok.Setter;
 @Builder(toBuilder = true)
 public class ApplicationStatus {
   private UUID id;
-  private String name;
+  private ApplicationStatusName name;
   private String description;
 }

@@ -56,4 +56,18 @@ public class ProductTypeRepositoryAdapter
                 log.error(
                     "Could not save product type: {}. Details: {}", entity, err.getMessage()));
   }
+
+  @Override
+  public Mono<ProductType> findById(UUID id) {
+    return super.findById(id)
+        .as(txOperator::transactional)
+        .doOnSubscribe(sub -> log.info("Fetching productType by id: {}", id))
+        .doOnSuccess(res -> log.info("Product type: {} for id: {}", res, id))
+        .doOnError(
+            err ->
+                log.info(
+                    "Error while trying to retrieve product type with id: {}. Error: {}",
+                    id,
+                    err.getMessage()));
+  }
 }
