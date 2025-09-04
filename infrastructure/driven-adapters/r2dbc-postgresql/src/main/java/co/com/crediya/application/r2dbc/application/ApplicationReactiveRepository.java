@@ -9,4 +9,5 @@ import co.com.crediya.application.r2dbc.entity.ApplicationEntity;
 
 public interface ApplicationReactiveRepository
     extends ReactiveCrudRepository<ApplicationEntity, UUID>,
-        ReactiveQueryByExampleExecutor<ApplicationEntity> {}
+        ReactiveQueryByExampleExecutor<ApplicationEntity>,
+        ApplicationTemplateQueryRepository {}

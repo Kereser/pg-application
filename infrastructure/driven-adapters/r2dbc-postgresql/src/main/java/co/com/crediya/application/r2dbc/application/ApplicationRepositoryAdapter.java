@@ -7,10 +7,12 @@ import org.springframework.transaction.reactive.TransactionalOperator;
 
 import co.com.crediya.application.model.application.Application;
 import co.com.crediya.application.model.application.gateways.ApplicationRepository;
+import co.com.crediya.application.model.dto.GetApplicationFilteredCommand;
 import co.com.crediya.application.r2dbc.application.mapper.ApplicationMapperStandard;
 import co.com.crediya.application.r2dbc.entity.ApplicationEntity;
 import co.com.crediya.application.r2dbc.helper.ReactiveAdapterOperations;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Repository
@@ -27,6 +29,16 @@ public class ApplicationRepositoryAdapter
       TransactionalOperator txOperator) {
     super(repository, mapper::toEntity, mapper::toData);
     this.txOperator = txOperator;
+  }
+
+  @Override
+  public Mono<Long> countByFilers(GetApplicationFilteredCommand filters) {
+    return repository.countAllFiltered(filters);
+  }
+
+  @Override
+  public Flux<Application> findAllFiltered(GetApplicationFilteredCommand filters) {
+    return repository.findAllFiltered(filters).map(super::toEntity).as(txOperator::transactional);
   }
 
   @Override
