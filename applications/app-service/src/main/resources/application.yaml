@@ -40,19 +40,19 @@ routes:
   paths:
     base: "/api/v1"
     application: "/applications"
+    applicationsToReview: "/applications/manual_review"
 
 adapters:
   r2dbc:
-    host: "localhost"
-    port: 5432
-    database: "application"
-    username: "crediya"
-    password: "P@55w0rd"
-
+    host: ${DB_HOST:localhost}
+    port: ${DB_PORT:5432}
+    database: ${DB_NAME:application}
+    username: ${DB_USER:crediya}
+    password: ${DB_PASSWORD:P@55w0rd}
 adapter:
   restconsumer:
     timeout: 5000
-    url: "http://localhost:8080/api/v1/users"
+    url: ${AUTH_API_URL:http://localhost:8080/api}
 
 logging:
   level:
@@ -76,7 +76,7 @@ resilience4j:
         slidingWindowSize: 10
         minimumNumberOfCalls: 10
         waitDurationInOpenState: "10s"
-      testPost:
+      findUserByIdIn:
         registerHealthIndicator: true
         failureRateThreshold: 50
         slowCallRateThreshold: 50
