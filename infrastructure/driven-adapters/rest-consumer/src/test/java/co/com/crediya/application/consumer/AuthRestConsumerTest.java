@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import co.com.crediya.application.consumer.helper.AuthRestMapper;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 
@@ -15,6 +16,7 @@ import okhttp3.mockwebserver.MockWebServer;
 class AuthRestConsumerTest {
 
   private static AuthRestConsumer authRestConsumer;
+  private static AuthRestMapper authRestMapper;
 
   private static MockWebServer mockBackEnd;
 
@@ -23,7 +25,7 @@ class AuthRestConsumerTest {
     mockBackEnd = new MockWebServer();
     mockBackEnd.start();
     var webClient = WebClient.builder().baseUrl(mockBackEnd.url("/").toString()).build();
-    authRestConsumer = new AuthRestConsumer(webClient);
+    authRestConsumer = new AuthRestConsumer(webClient, authRestMapper);
   }
 
   @AfterAll
