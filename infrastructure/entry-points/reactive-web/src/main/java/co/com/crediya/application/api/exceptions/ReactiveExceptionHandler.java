@@ -2,6 +2,7 @@ package co.com.crediya.application.api.exceptions;
 
 import java.util.Map;
 
+import co.com.crediya.application.model.CommonConstants;
 import org.springframework.boot.autoconfigure.web.WebProperties;
 import org.springframework.boot.autoconfigure.web.reactive.error.AbstractErrorWebExceptionHandler;
 import org.springframework.boot.web.reactive.error.ErrorAttributes;
@@ -53,7 +54,7 @@ public class ReactiveExceptionHandler extends AbstractErrorWebExceptionHandler {
               exception.getAttribute(),
               httpStatus.value(),
               exception.getMessage(),
-              exception.getReason() == null ? "" : exception.getReason());
+              exception.getReason() == null ? CommonConstants.Chars.EMPTY : exception.getReason());
 
       return ServerResponse.status(httpStatus)
           .contentType(MediaType.APPLICATION_JSON)
