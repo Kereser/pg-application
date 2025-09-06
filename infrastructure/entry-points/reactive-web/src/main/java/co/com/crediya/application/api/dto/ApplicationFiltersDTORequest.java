@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.springframework.web.reactive.function.server.ServerRequest;
 
+import co.com.crediya.application.model.CommonConstants;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -15,15 +16,17 @@ public class ApplicationFiltersDTORequest {
   private final int size;
   private final ApplicationFilters filters;
 
-  private static final int PAGE_DEF = 0;
-  private static final int SIZE_DEF = 2;
-
-  private static final String PAGE_STR = "page";
-  private static final String SIZE_STR = "size";
-
   public static ApplicationFiltersDTORequest from(ServerRequest request) {
-    int page = request.queryParam(PAGE_STR).map(Integer::parseInt).orElse(PAGE_DEF);
-    int size = request.queryParam(SIZE_STR).map(Integer::parseInt).orElse(SIZE_DEF);
+    int page =
+        request
+            .queryParam(CommonConstants.QueryParams.PAGE)
+            .map(Integer::parseInt)
+            .orElse(CommonConstants.QueryParams.PAGE_DEF);
+    int size =
+        request
+            .queryParam(CommonConstants.QueryParams.SIZE)
+            .map(Integer::parseInt)
+            .orElse(CommonConstants.QueryParams.SIZE_DEF);
 
     ApplicationFilters filters = ApplicationFilters.from(request);
 
@@ -37,17 +40,19 @@ public class ApplicationFiltersDTORequest {
     private final BigDecimal amount;
     private final Boolean haveManualReview;
 
-    private static final String USER_ID = "userId";
-    private static final String AMOUNT_STR = "amount";
-    private static final String MANUAL_REVIEW = "manual_review";
-
     public static ApplicationFilters from(ServerRequest request) {
       ApplicationFiltersBuilder filtersBuilder = ApplicationFilters.builder();
 
-      request.queryParam(USER_ID).map(UUID::fromString).ifPresent(filtersBuilder::userId);
-      request.queryParam(AMOUNT_STR).map(BigDecimal::new).ifPresent(filtersBuilder::amount);
       request
-          .queryParam(MANUAL_REVIEW)
+          .queryParam(CommonConstants.Fields.USER_ID)
+          .map(UUID::fromString)
+          .ifPresent(filtersBuilder::userId);
+      request
+          .queryParam(CommonConstants.Fields.AMOUNT)
+          .map(BigDecimal::new)
+          .ifPresent(filtersBuilder::amount);
+      request
+          .queryParam(CommonConstants.QueryParams.MANUAL_REVIEW_QUERY)
           .map(Boolean::valueOf)
           .ifPresent(filtersBuilder::haveManualReview);
 

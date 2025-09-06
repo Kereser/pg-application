@@ -9,15 +9,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 
 import co.com.crediya.application.api.config.security.utils.JwtUtils;
+import co.com.crediya.application.model.CommonConstants;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 
 @Component
 @RequiredArgsConstructor
 public class JwtSecurityContextRepository implements ServerSecurityContextRepository {
-  private static final String BEARER = "Bearer ";
-  private static final int TOKEN_SUB_STR_LEN = 7;
-
   private final JwtUtils jwtUtils;
 
   @Override
@@ -29,8 +27,8 @@ public class JwtSecurityContextRepository implements ServerSecurityContextReposi
   public Mono<SecurityContext> load(ServerWebExchange exchange) {
     String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
-    if (authHeader != null && authHeader.startsWith(BEARER)) {
-      String authToken = authHeader.substring(TOKEN_SUB_STR_LEN);
+    if (authHeader != null && authHeader.startsWith(CommonConstants.Security.BEARER)) {
+      String authToken = authHeader.substring(CommonConstants.Security.TOKEN_SUB_STR_LEN);
       if (jwtUtils.validateToken(authToken)) {
         UsernamePasswordAuthenticationToken authentication =
             jwtUtils.getAuthenticationInfo(authToken);

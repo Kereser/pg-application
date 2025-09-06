@@ -10,6 +10,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
+import co.com.crediya.application.api.helper.RestConstants;
+import co.com.crediya.application.model.CommonConstants;
+
 @Configuration
 public class CorsConfig {
 
@@ -17,12 +20,12 @@ public class CorsConfig {
   CorsWebFilter corsWebFilter(@Value("${cors.allowed-origins}") String origins) {
     CorsConfiguration config = new CorsConfiguration();
     config.setAllowCredentials(true);
-    config.setAllowedOrigins(List.of(origins.split(",")));
-    config.setAllowedMethods(Arrays.asList("POST", "GET"));
+    config.setAllowedOrigins(List.of(origins.split(CommonConstants.Chars.COMMA_DELIMITER)));
+    config.setAllowedMethods(Arrays.asList(RestConstants.Methods.POST, RestConstants.Methods.GET));
     config.setAllowedHeaders(List.of(CorsConfiguration.ALL));
 
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-    source.registerCorsConfiguration("/**", config);
+    source.registerCorsConfiguration(CommonConstants.Chars.PATH_ALL, config);
 
     return new CorsWebFilter(source);
   }

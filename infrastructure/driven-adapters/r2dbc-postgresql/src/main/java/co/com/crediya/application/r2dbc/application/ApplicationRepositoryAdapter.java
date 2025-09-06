@@ -23,6 +23,10 @@ public class ApplicationRepositoryAdapter
     implements ApplicationRepository {
   private final TransactionalOperator txOperator;
 
+  private static final String LOG_SAVE_SUBSCRIBE = "Saving application {}";
+  private static final String LOG_SAVE_SUCCESS = "Saved application: {}";
+  private static final String LOG_SAVE_ERROR = "Could not save application: {}. Details: {}";
+
   public ApplicationRepositoryAdapter(
       ApplicationReactiveRepository repository,
       ApplicationMapperStandard mapper,
@@ -45,10 +49,8 @@ public class ApplicationRepositoryAdapter
   public Mono<Application> save(Application entity) {
     return super.save(entity)
         .as(txOperator::transactional)
-        .doOnSubscribe(sub -> log.info("Saving Application {}", entity))
-        .doOnSuccess(res -> log.info("Saved application: {}", res))
-        .doOnError(
-            err ->
-                log.error("Could not save application: {}. Details: {}", entity, err.getMessage()));
+        .doOnSubscribe(sub -> log.info(LOG_SAVE_SUBSCRIBE, entity))
+        .doOnSuccess(res -> log.info(LOG_SAVE_SUCCESS, res))
+        .doOnError(err -> log.error(LOG_SAVE_ERROR, entity, err.getMessage()));
   }
 }

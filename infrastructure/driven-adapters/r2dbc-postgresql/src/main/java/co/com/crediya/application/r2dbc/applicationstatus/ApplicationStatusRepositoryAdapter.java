@@ -24,6 +24,15 @@ public class ApplicationStatusRepositoryAdapter
     implements ApplicationStatusRepository {
   private final TransactionalOperator txOperator;
 
+  private static final String LOG_FIND_BY_NAME_SUBSCRIBE = "Getting pending application status obj";
+  private static final String LOG_FIND_BY_NAME_SUCCESS = "Pending application status: {}";
+  private static final String LOG_FIND_BY_NAME_ERROR =
+      "Could not find 'PENDING' application type. Details: {}";
+
+  private static final String LOG_SAVE_SUBSCRIBE = "Saving status {}";
+  private static final String LOG_SAVE_SUCCESS = "Saved status: {}";
+  private static final String LOG_SAVE_ERROR = "Could not save application status: {}. Details: {}";
+
   public ApplicationStatusRepositoryAdapter(
       ApplicationStatusReactiveRepository repository,
       ApplicationStatusMapperStandard mapper,
@@ -48,25 +57,17 @@ public class ApplicationStatusRepositoryAdapter
         .findByName(statusName.getName())
         .map(super::toEntity)
         .as(txOperator::transactional)
-        .doOnSubscribe(sub -> log.info("Getting pending application status obj"))
-        .doOnSuccess(res -> log.info("Pending application status: {}", res))
-        .doOnError(
-            err ->
-                log.error(
-                    "Could not find 'PENDING' application type. Details: {}", err.getMessage()));
+        .doOnSubscribe(sub -> log.info(LOG_FIND_BY_NAME_SUBSCRIBE))
+        .doOnSuccess(res -> log.info(LOG_FIND_BY_NAME_SUCCESS, res))
+        .doOnError(err -> log.error(LOG_FIND_BY_NAME_ERROR, err.getMessage()));
   }
 
   @Override
   public Mono<ApplicationStatus> save(ApplicationStatus entity) {
     return super.save(entity)
         .as(txOperator::transactional)
-        .doOnSubscribe(sub -> log.info("Saving status {}", entity))
-        .doOnSuccess(res -> log.info("saved status: {}", res))
-        .doOnError(
-            err ->
-                log.error(
-                    "Could not find application status: {}. Details: {}",
-                    entity,
-                    err.getMessage()));
+        .doOnSubscribe(sub -> log.info(LOG_SAVE_SUBSCRIBE, entity))
+        .doOnSuccess(res -> log.info(LOG_SAVE_SUCCESS, res))
+        .doOnError(err -> log.error(LOG_SAVE_ERROR, entity, err.getMessage()));
   }
 }

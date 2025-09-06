@@ -15,6 +15,7 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 import co.com.crediya.application.api.config.Routes;
 import co.com.crediya.application.api.dto.CreateApplicationDTORequest;
 import co.com.crediya.application.api.exceptions.ErrorResponseDTO;
+import co.com.crediya.application.api.helper.RestConstants;
 import co.com.crediya.application.model.dto.ApplicationDTOResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -51,27 +52,27 @@ public class RouterRest {
                                     @Schema(implementation = CreateApplicationDTORequest.class))),
                 responses = {
                   @ApiResponse(
-                      responseCode = "200",
+                      responseCode = RestConstants.StatusCodeInt.OK,
                       description = "Application created",
                       content =
                           @Content(
                               schema = @Schema(implementation = ApplicationDTOResponse.class))),
                   @ApiResponse(
-                      responseCode = "400",
+                      responseCode = RestConstants.StatusCodeInt.BAD_REQUEST,
                       description = "Invalid input",
                       content =
                           @Content(
                               mediaType = MediaType.APPLICATION_JSON_VALUE,
                               schema = @Schema(implementation = ErrorResponseDTO.class))),
                   @ApiResponse(
-                      responseCode = "409",
+                      responseCode = RestConstants.StatusCodeInt.CONFLICT,
                       description = "Conflict",
                       content =
                           @Content(
                               mediaType = MediaType.APPLICATION_JSON_VALUE,
                               schema = @Schema(implementation = ErrorResponseDTO.class))),
                   @ApiResponse(
-                      responseCode = "500",
+                      responseCode = RestConstants.StatusCodeInt.SERVER_ERROR,
                       description = "Internal Server Error",
                       content =
                           @Content(
@@ -79,7 +80,7 @@ public class RouterRest {
                               schema = @Schema(implementation = ErrorResponse.class)))
                 })),
     @RouterOperation(
-        path = "api/v1/applications/review",
+        path = RestConstants.ApplicationAPI.REVIEW,
         produces = {"application/json"},
         method = RequestMethod.GET,
         beanClass = Handler.class,
@@ -113,14 +114,14 @@ public class RouterRest {
                 },
                 responses = {
                   @ApiResponse(
-                      responseCode = "200",
+                      responseCode = RestConstants.StatusCodeInt.OK,
                       description = "List of applications",
                       content =
                           @Content(
                               mediaType = MediaType.APPLICATION_JSON_VALUE,
                               schema = @Schema(implementation = ApplicationDTOResponse.class))),
                   @ApiResponse(
-                      responseCode = "500",
+                      responseCode = RestConstants.StatusCodeInt.SERVER_ERROR,
                       description = "Internal Server Error",
                       content =
                           @Content(
@@ -131,7 +132,7 @@ public class RouterRest {
   public RouterFunction<ServerResponse> routerFunction(Handler handler) {
     return route()
         .path(
-            routes.getPaths().getBase(),
+            RestConstants.ApplicationAPI.ROOT,
             builder ->
                 builder
                     .POST(
