@@ -3,6 +3,8 @@ package co.com.crediya.application.requestvalidator;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import co.com.crediya.application.model.CommonConstants;
+import co.com.crediya.application.model.exceptions.PlainErrors;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 
@@ -19,7 +21,7 @@ public record RequestValidator(Validator validator) {
   public <T> Mono<T> validate(ServerRequest request, Class<T> bodyClass, String targetClass) {
     return request
         .bodyToMono(bodyClass)
-        .switchIfEmpty(Mono.error(new RuntimeException("Missing required body")))
+        .switchIfEmpty(Mono.error(new RuntimeException(PlainErrors.MISSING_REQUIRED_BODY.getName())))
         .flatMap(
             body -> {
               Set<ConstraintViolation<T>> violations = validator.validate(body);
@@ -30,8 +32,8 @@ public record RequestValidator(Validator validator) {
 
               String errorMessages =
                   violations.stream()
-                      .map(v -> v.getPropertyPath() + ": " + v.getMessage())
-                      .collect(Collectors.joining(", "));
+                      .map(v -> v.getPropertyPath() + CommonConstants.Chars.COLON_DELIMITER_SPACE + v.getMessage())
+                      .collect(Collectors.joining(CommonConstants.Chars.COMMA_DELIMITER_SPACE));
 
               return Mono.error(new MissingRequiredBodyException(targetClass, errorMessages));
             });
