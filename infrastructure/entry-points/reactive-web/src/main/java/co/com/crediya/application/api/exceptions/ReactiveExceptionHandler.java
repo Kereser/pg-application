@@ -15,6 +15,7 @@ import org.springframework.web.ErrorResponse;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.server.*;
 
+import co.com.crediya.application.model.CommonConstants;
 import co.com.crediya.application.model.exceptions.BusinessException;
 import reactor.core.publisher.Mono;
 
@@ -53,7 +54,7 @@ public class ReactiveExceptionHandler extends AbstractErrorWebExceptionHandler {
               exception.getAttribute(),
               httpStatus.value(),
               exception.getMessage(),
-              exception.getReason() == null ? "" : exception.getReason());
+              exception.getReason() == null ? CommonConstants.Chars.EMPTY : exception.getReason());
 
       return ServerResponse.status(httpStatus)
           .contentType(MediaType.APPLICATION_JSON)

@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 public enum ApplicationStatusName {
   PENDING("PENDING"),
   REJECTED("REJECTED"),
+  APPROVED("APPROVED"),
   MANUAL_REVISION("MANUAL_REVISION");
 
   private final String name;

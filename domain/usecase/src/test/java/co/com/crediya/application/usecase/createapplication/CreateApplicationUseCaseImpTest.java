@@ -24,7 +24,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import co.com.crediya.application.model.CommonConstants;
 import co.com.crediya.application.model.application.Application;
+import co.com.crediya.application.model.application.dto.ApplicationDTOResponse;
+import co.com.crediya.application.model.application.dto.CreateApplicationCommand;
 import co.com.crediya.application.model.application.gateways.ApplicationRepository;
 import co.com.crediya.application.model.application.vo.Amount;
 import co.com.crediya.application.model.applicationstatus.ApplicationStatus;
@@ -32,8 +35,6 @@ import co.com.crediya.application.model.applicationstatus.ApplicationStatusName;
 import co.com.crediya.application.model.applicationstatus.gateways.ApplicationStatusRepository;
 import co.com.crediya.application.model.auth.UserSummary;
 import co.com.crediya.application.model.auth.gateway.AuthGateway;
-import co.com.crediya.application.model.dto.ApplicationDTOResponse;
-import co.com.crediya.application.model.dto.CreateApplicationCommand;
 import co.com.crediya.application.model.exceptions.EntityNotFoundException;
 import co.com.crediya.application.model.exceptions.IllegalValueForArgumentException;
 import co.com.crediya.application.model.exceptions.ResourceOwnershipException;
@@ -71,10 +72,10 @@ class CreateApplicationUseCaseImpTest {
   private ApplicationDTOResponse responseDTO;
   private SecurityDetails securityDetails;
 
-  BigDecimal amount = new BigDecimal(5_000_000);
-  BigDecimal minVal = new BigDecimal(1_000_000);
-  BigDecimal maxVal = new BigDecimal(200_000_000);
-  String loanType = "VEHICLE_INVERSION";
+  BigDecimal amount = CommonConstants.Amount.FIVE_M;
+  BigDecimal minVal = CommonConstants.Amount.ONE_M;
+  BigDecimal maxVal = CommonConstants.Amount.TWO_H_M;
+  String loanType = CommonConstants.ProductTypeName.VEHICLE_LOAN;
 
   @BeforeEach
   void setUp() {
@@ -98,7 +99,10 @@ class CreateApplicationUseCaseImpTest {
             .maxAmount(maxVal)
             .build();
     applicationStatus =
-        new ApplicationStatus(UUID.randomUUID(), ApplicationStatusName.PENDING, "Pending");
+        new ApplicationStatus(
+            UUID.randomUUID(),
+            ApplicationStatusName.PENDING,
+            ApplicationStatusName.PENDING.getName());
 
     applicationToSave = Application.builder().amount(new Amount(amount)).build();
     Application savedApplication =
@@ -225,7 +229,7 @@ class CreateApplicationUseCaseImpTest {
   }
 
   private static Stream<Arguments> invalidAmountProvider() {
-    BigDecimal baseAmount = new BigDecimal(10_000_000);
+    BigDecimal baseAmount = CommonConstants.Amount.TEN_M;
 
     ProductType produceMinValError =
         ProductType.builder()
@@ -233,9 +237,9 @@ class CreateApplicationUseCaseImpTest {
             .maxAmount(baseAmount.add(BigDecimal.TEN))
             .build();
 
-    ProductType producteMaxValError =
+    ProductType productMaxValError =
         ProductType.builder().minAmount(BigDecimal.ONE).maxAmount(BigDecimal.TEN).build();
 
-    return Stream.of(Arguments.of(produceMinValError), Arguments.of(producteMaxValError));
+    return Stream.of(Arguments.of(produceMinValError), Arguments.of(productMaxValError));
   }
 }

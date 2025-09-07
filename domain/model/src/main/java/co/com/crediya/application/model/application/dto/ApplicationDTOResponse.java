@@ -1,4 +1,4 @@
-package co.com.crediya.application.model.dto;
+package co.com.crediya.application.model.application.dto;
 
 import java.math.BigDecimal;
 import java.util.UUID;

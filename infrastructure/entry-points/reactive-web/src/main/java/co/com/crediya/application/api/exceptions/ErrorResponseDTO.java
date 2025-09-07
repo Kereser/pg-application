@@ -1,13 +1,23 @@
 package co.com.crediya.application.api.exceptions;
 
+import co.com.crediya.application.api.helper.RestConstants;
+import co.com.crediya.application.model.CommonConstants;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 public record ErrorResponseDTO(
-    @Schema(description = "Attribute or field", example = "email") String attribute,
-    @Schema(description = "Http status code", example = "409") int status,
-    @Schema(description = "Generic error for class", example = "Field validation exception")
+    @Schema(
+            description = CommonConstants.ErrorResponse.ATTRIBUTE_DESCRIPTION,
+            example = CommonConstants.Fields.EMAIL)
+        String attribute,
+    @Schema(
+            description = CommonConstants.ErrorResponse.STATUS_DESCRIPTION,
+            example = RestConstants.StatusCodeInt.CONFLICT)
+        int status,
+    @Schema(
+            description = CommonConstants.ErrorResponse.ERROR_DESCRIPTION,
+            example = CommonConstants.ErrorResponse.ERROR_EXAMPLE)
         String error,
     @Schema(
-            description = "Detailed error",
-            example = "exampleValue is not a valid value for exampleAttribute")
+            description = CommonConstants.ErrorResponse.DETAILS_DESCRIPTION,
+            example = CommonConstants.ErrorResponse.DETAILS_EXAMPLE)
         String details) {}

@@ -1,145 +1,32 @@
 package co.com.crediya.application.api;
 
-import static org.springframework.web.reactive.function.server.RouterFunctions.route;
-
-import org.springdoc.core.annotations.RouterOperation;
-import org.springdoc.core.annotations.RouterOperations;
+import org.springdoc.webflux.core.fn.SpringdocRouteBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.MediaType;
-import org.springframework.web.ErrorResponse;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
-import co.com.crediya.application.api.config.Routes;
-import co.com.crediya.application.api.dto.CreateApplicationDTORequest;
-import co.com.crediya.application.api.exceptions.ErrorResponseDTO;
-import co.com.crediya.application.model.dto.ApplicationDTOResponse;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import lombok.AllArgsConstructor;
+import co.com.crediya.application.api.helper.ApplicationAPIDocs;
+import co.com.crediya.application.api.helper.RestConstants;
 
 @Configuration
-@AllArgsConstructor
 public class RouterRest {
-  private final Routes routes;
-  private final Handler applicationHandler;
 
   @Bean
-  @RouterOperations({
-    @RouterOperation(
-        path = "api/v1/applications",
-        produces = {"application/json"},
-        method = RequestMethod.POST,
-        beanClass = Handler.class,
-        beanMethod = "listenSaveApplication",
-        operation =
-            @Operation(
-                operationId = "createApplication",
-                summary = "Create a new application",
-                requestBody =
-                    @RequestBody(
-                        required = true,
-                        description = "Application creation request",
-                        content =
-                            @Content(
-                                schema =
-                                    @Schema(implementation = CreateApplicationDTORequest.class))),
-                responses = {
-                  @ApiResponse(
-                      responseCode = "200",
-                      description = "Application created",
-                      content =
-                          @Content(
-                              schema = @Schema(implementation = ApplicationDTOResponse.class))),
-                  @ApiResponse(
-                      responseCode = "400",
-                      description = "Invalid input",
-                      content =
-                          @Content(
-                              mediaType = MediaType.APPLICATION_JSON_VALUE,
-                              schema = @Schema(implementation = ErrorResponseDTO.class))),
-                  @ApiResponse(
-                      responseCode = "409",
-                      description = "Conflict",
-                      content =
-                          @Content(
-                              mediaType = MediaType.APPLICATION_JSON_VALUE,
-                              schema = @Schema(implementation = ErrorResponseDTO.class))),
-                  @ApiResponse(
-                      responseCode = "500",
-                      description = "Internal Server Error",
-                      content =
-                          @Content(
-                              mediaType = MediaType.APPLICATION_JSON_VALUE,
-                              schema = @Schema(implementation = ErrorResponse.class)))
-                })),
-    @RouterOperation(
-        path = "api/v1/applications/review",
-        produces = {"application/json"},
-        method = RequestMethod.GET,
-        beanClass = Handler.class,
-        beanMethod = "listenGetApplicationsForManualReview",
-        operation =
-            @Operation(
-                operationId = "getApplicationsForManualReview",
-                summary = "Get applications pending manual review",
-                parameters = {
-                  @io.swagger.v3.oas.annotations.Parameter(
-                      name = "page",
-                      description = "Page number",
-                      schema = @Schema(type = "integer", defaultValue = "0")),
-                  @io.swagger.v3.oas.annotations.Parameter(
-                      name = "size",
-                      description = "Page size",
-                      schema = @Schema(type = "integer", defaultValue = "2")),
-                  @io.swagger.v3.oas.annotations.Parameter(
-                      name = "userId",
-                      description = "User id to filter by",
-                      schema =
-                          @Schema(
-                              type = "string",
-                              format = "uuid",
-                              example = "550e8400-e29b-41d4-a716-446655440000")),
-                  @io.swagger.v3.oas.annotations.Parameter(
-                      name = "amount",
-                      description = "amount used to filter by",
-                      schema =
-                          @Schema(type = "number", format = "decimal", example = "1200000.50")),
-                },
-                responses = {
-                  @ApiResponse(
-                      responseCode = "200",
-                      description = "List of applications",
-                      content =
-                          @Content(
-                              mediaType = MediaType.APPLICATION_JSON_VALUE,
-                              schema = @Schema(implementation = ApplicationDTOResponse.class))),
-                  @ApiResponse(
-                      responseCode = "500",
-                      description = "Internal Server Error",
-                      content =
-                          @Content(
-                              mediaType = MediaType.APPLICATION_JSON_VALUE,
-                              schema = @Schema(implementation = ErrorResponse.class)))
-                }))
-  })
-  public RouterFunction<ServerResponse> routerFunction(Handler handler) {
-    return route()
-        .path(
-            routes.getPaths().getBase(),
-            builder ->
-                builder
-                    .POST(
-                        routes.getPaths().getApplication(),
-                        applicationHandler::listenSaveApplication)
-                    .GET(
-                        routes.getPaths().getApplicationsToReview(),
-                        applicationHandler::listenGetApplicationsForManualReview))
+  public RouterFunction<ServerResponse> routerFunction(Handler applicationHandler) {
+    return SpringdocRouteBuilder.route()
+        .POST(
+            RestConstants.ApplicationAPI.APPLICATIONS,
+            applicationHandler::listenSaveApplication,
+            ops -> ApplicationAPIDocs.saveApplicationDocs().accept(ops))
+        .GET(
+            RestConstants.ApplicationAPI.TO_REVIEW,
+            applicationHandler::listenGetApplicationsForManualReview,
+            ops -> ApplicationAPIDocs.getApplicationsForManualReview().accept(ops))
+        .PATCH(
+            RestConstants.ApplicationAPI.APPLICATION_ID,
+            applicationHandler::listenPatchApplicationWithStatus,
+            ops -> ApplicationAPIDocs.patchApplicationStatus().accept(ops))
         .build();
   }
 }

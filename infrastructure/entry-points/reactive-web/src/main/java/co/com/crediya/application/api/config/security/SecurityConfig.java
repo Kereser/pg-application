@@ -9,6 +9,7 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 
 import co.com.crediya.application.api.config.Routes;
 import co.com.crediya.application.api.config.security.implementations.JwtSecurityContextRepository;
+import co.com.crediya.application.api.helper.RestConstants;
 import co.com.crediya.application.model.RoleConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -58,17 +59,11 @@ public class SecurityConfig {
         .permitAll()
         .pathMatchers(ACTUATOR_PATHS)
         .permitAll()
-        .pathMatchers(HttpMethod.POST, applicationPath())
-        .hasAnyAuthority(RoleConstants.CLIENT, RoleConstants.MANAGER, RoleConstants.ADMIN)
+        .pathMatchers(HttpMethod.POST, RestConstants.ApplicationAPI.APPLICATIONS)
+        .hasAnyAuthority(RoleConstants.CLIENT, RoleConstants.MANAGER)
+        .pathMatchers(HttpMethod.PATCH, RestConstants.ApplicationAPI.APPLICATION_ID)
+        .hasAuthority(RoleConstants.MANAGER)
         .anyExchange()
         .authenticated();
-  }
-
-  private String buildFullPath(String path) {
-    return String.format("%s%s", routes.getPaths().getBase(), path);
-  }
-
-  private String applicationPath() {
-    return buildFullPath(routes.getPaths().getApplication());
   }
 }

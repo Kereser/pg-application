@@ -9,14 +9,15 @@ import org.mapstruct.MappingConstants;
 
 import co.com.crediya.application.model.application.Application;
 import co.com.crediya.application.model.application.ApplicationSummary;
+import co.com.crediya.application.model.application.dto.ApplicationDTOResponse;
+import co.com.crediya.application.model.application.dto.CreateApplicationCommand;
 import co.com.crediya.application.model.application.vo.Amount;
 import co.com.crediya.application.model.application.vo.ApplicationPeriod;
 import co.com.crediya.application.model.applicationstatus.ApplicationStatus;
 import co.com.crediya.application.model.auth.UserSummary;
-import co.com.crediya.application.model.dto.ApplicationDTOResponse;
-import co.com.crediya.application.model.dto.CreateApplicationCommand;
 import co.com.crediya.application.model.mapper.ApplicationMapper;
 import co.com.crediya.application.model.producttype.ProductType;
+import co.com.crediya.application.model.sqs.SqsSummaryDTO;
 import co.com.crediya.application.r2dbc.entity.ApplicationEntity;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
@@ -56,7 +57,14 @@ public interface ApplicationMapperStandard extends ApplicationMapper {
   @Mapping(target = "interestRate", source = "application.productType.interestRate")
   @Mapping(target = "totalApprovedDebt", ignore = true)
   @Mapping(target = "name", source = "user.firstName")
+  @Mapping(target = "id", source = "application.id")
   ApplicationSummary toSummary(Application application, UserSummary user);
+
+  @Override
+  @Mapping(target = "applicationId", source = "application.id")
+  @Mapping(target = "name", source = "user.firstName")
+  @Mapping(target = "status", source = "application.applicationStatus.name")
+  SqsSummaryDTO toSqsSummary(Application application, UserSummary user);
 
   default UUID toStatusId(Application entity) {
     return entity.getApplicationStatus().getId();

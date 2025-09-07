@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 import co.com.crediya.application.model.application.Application;
+import co.com.crediya.application.model.application.dto.ApplicationDTOResponse;
+import co.com.crediya.application.model.application.dto.CreateApplicationCommand;
 import co.com.crediya.application.model.application.gateways.ApplicationRepository;
 import co.com.crediya.application.model.application.vo.Amount;
 import co.com.crediya.application.model.application.vo.IdNumber;
@@ -12,8 +14,6 @@ import co.com.crediya.application.model.applicationstatus.ApplicationStatusName;
 import co.com.crediya.application.model.applicationstatus.gateways.ApplicationStatusRepository;
 import co.com.crediya.application.model.auth.UserSummary;
 import co.com.crediya.application.model.auth.gateway.AuthGateway;
-import co.com.crediya.application.model.dto.ApplicationDTOResponse;
-import co.com.crediya.application.model.dto.CreateApplicationCommand;
 import co.com.crediya.application.model.exceptions.*;
 import co.com.crediya.application.model.mapper.ApplicationMapper;
 import co.com.crediya.application.model.producttype.ProductType;

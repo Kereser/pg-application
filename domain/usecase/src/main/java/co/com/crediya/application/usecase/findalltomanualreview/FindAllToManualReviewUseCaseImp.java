@@ -6,13 +6,13 @@ import java.util.stream.Collectors;
 
 import co.com.crediya.application.model.application.Application;
 import co.com.crediya.application.model.application.ApplicationSummary;
+import co.com.crediya.application.model.application.dto.GetApplicationFilteredCommand;
 import co.com.crediya.application.model.application.gateways.ApplicationRepository;
 import co.com.crediya.application.model.applicationstatus.ApplicationStatus;
 import co.com.crediya.application.model.applicationstatus.ApplicationStatusName;
 import co.com.crediya.application.model.applicationstatus.gateways.ApplicationStatusRepository;
 import co.com.crediya.application.model.auth.UserSummary;
 import co.com.crediya.application.model.auth.gateway.AuthGateway;
-import co.com.crediya.application.model.dto.GetApplicationFilteredCommand;
 import co.com.crediya.application.model.dto.PageDTOResponse;
 import co.com.crediya.application.model.exceptions.Entities;
 import co.com.crediya.application.model.exceptions.EntityNotFoundException;

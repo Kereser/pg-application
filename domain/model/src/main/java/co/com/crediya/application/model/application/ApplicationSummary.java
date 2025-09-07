@@ -14,6 +14,7 @@ import lombok.ToString;
 @ToString
 public class ApplicationSummary {
   private UUID userId;
+  private UUID id;
   private String email;
   private String name;
   private BigDecimal baseSalary;

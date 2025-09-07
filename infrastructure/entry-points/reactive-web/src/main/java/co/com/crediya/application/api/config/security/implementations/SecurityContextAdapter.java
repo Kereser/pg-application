@@ -18,6 +18,11 @@ import reactor.core.publisher.Mono;
 @Slf4j
 @Component
 public class SecurityContextAdapter implements SecurityGateway {
+  private static final String LOG_GET_DETAILS_SUBSCRIBE = "Getting details from context.";
+  private static final String LOG_GET_DETAILS_SUCCESS = "Returned details from context: {}";
+  private static final String LOG_GET_DETAILS_ERROR =
+      "Failed to get details from context. Details: {}";
+
   public Mono<Authentication> getAuthentication() {
     return ReactiveSecurityContextHolder.getContext()
         .map(SecurityContext::getAuthentication)
@@ -28,10 +33,9 @@ public class SecurityContextAdapter implements SecurityGateway {
   public Mono<SecurityDetails> getDetailsFromContext() {
     return Mono.zip(getCurrentUserId(), getRoles())
         .map(tuple -> new SecurityDetails(tuple.getT1(), tuple.getT2()))
-        .doOnSubscribe(sub -> log.info("Getting details from context."))
-        .doOnSuccess(res -> log.info("Returned details from context: {}", res))
-        .doOnError(
-            err -> log.error("Failed to get details from context. Details: {}", err.getMessage()));
+        .doOnSubscribe(sub -> log.info(LOG_GET_DETAILS_SUBSCRIBE))
+        .doOnSuccess(res -> log.info(LOG_GET_DETAILS_SUCCESS, res))
+        .doOnError(err -> log.error(LOG_GET_DETAILS_ERROR, err.getMessage()));
   }
 
   @Override

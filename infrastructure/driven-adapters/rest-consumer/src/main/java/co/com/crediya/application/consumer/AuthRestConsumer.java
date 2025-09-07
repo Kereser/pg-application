@@ -12,11 +12,10 @@ import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import co.com.crediya.application.consumer.helper.AuthRestMapper;
+import co.com.crediya.application.model.CommonConstants;
 import co.com.crediya.application.model.auth.UserSummary;
 import co.com.crediya.application.model.auth.gateway.AuthGateway;
-import co.com.crediya.application.model.exceptions.DuplicatedInfoException;
-import co.com.crediya.application.model.exceptions.EntityNotFoundException;
-import co.com.crediya.application.model.exceptions.GenericBadRequestException;
+import co.com.crediya.application.model.exceptions.*;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,32 +29,40 @@ public class AuthRestConsumer implements AuthGateway {
   private final WebClient client;
   private final AuthRestMapper mapper;
 
-  private static final String IDS_PARAM = "ids";
-  private static final String USERS_PATH = "/v1/users";
-  private static final String SLASH = "/";
+  private static final String LOG_FIND_USER_BY_ID_SUBSCRIBE = "Requesting user with idNumber: {}";
+  private static final String LOG_FIND_USER_BY_ID_SUCCESS = "Found usr: {}";
+  private static final String LOG_FIND_USER_BY_ID_ERROR =
+      "Error while trying to get user for idNumber: {}";
+  private static final String LOG_FIND_USERS_BY_IDS_SUBSCRIBE = "Requesting users with ids: {}";
+  private static final String LOG_FIND_USERS_BY_IDS_ERROR =
+      "Error while trying to get user for ids: {}. Error: {}";
 
   @Override
-  @CircuitBreaker(name = "findUserByIdNumber")
+  @CircuitBreaker(name = CommonConstants.AuthConsumerCircuitBreaker.FIND_USER_BY_ID_NUMBER)
   public Mono<UserSummary> findUserByIdNumber(String idNumber) {
     return client
         .get()
-        .uri(USERS_PATH + SLASH + idNumber)
+        .uri(CommonConstants.Endpoints.USERS_COMPLETE + idNumber)
         .retrieve()
         .onStatus(HttpStatusCode::isError, this::handleError)
         .bodyToMono(UserSummaryDTOResponse.class)
         .map(mapper::toDomain)
-        .doOnSubscribe(subscription -> log.info("Requesting user with idNumber: {}", idNumber))
-        .doOnSuccess(dto -> log.info("Found usr: {}", dto))
-        .doOnError(
-            err -> log.error("Error while trying to get user for idNumber: {}", err.getMessage()));
+        .doOnSubscribe(subscription -> log.info(LOG_FIND_USER_BY_ID_SUBSCRIBE, idNumber))
+        .doOnSuccess(dto -> log.info(LOG_FIND_USER_BY_ID_SUCCESS, dto))
+        .doOnError(err -> log.error(LOG_FIND_USER_BY_ID_ERROR, err.getMessage()));
   }
 
   @Override
-  @CircuitBreaker(name = "findUserByIdIn")
+  @CircuitBreaker(name = CommonConstants.AuthConsumerCircuitBreaker.FIND_USER_BY_ID_IN)
   public Flux<UserSummary> findUsersByIdIn(Set<UUID> userIds) {
     return client
         .get()
-        .uri(builder -> builder.path(USERS_PATH).queryParam(IDS_PARAM, userIds.toArray()).build())
+        .uri(
+            builder ->
+                builder
+                    .path(CommonConstants.Endpoints.USERS)
+                    .queryParam(CommonConstants.QueryParams.IDS, userIds.toArray())
+                    .build())
         .retrieve()
         .onStatus(HttpStatusCode::isError, this::handleError)
         .bodyToFlux(UserSummaryDTOResponse.class)
@@ -68,13 +75,8 @@ public class AuthRestConsumer implements AuthGateway {
                     usrDTORes.firstName(),
                     usrDTORes.idType(),
                     usrDTORes.idNumber()))
-        .doOnSubscribe(subscription -> log.info("Requesting users with ids: {}", userIds))
-        .doOnError(
-            err ->
-                log.error(
-                    "Error while trying to get user for ids: {}. Error: {}",
-                    userIds,
-                    err.getMessage()));
+        .doOnSubscribe(subscription -> log.info(LOG_FIND_USERS_BY_IDS_SUBSCRIBE, userIds))
+        .doOnError(err -> log.error(LOG_FIND_USERS_BY_IDS_ERROR, userIds, err.getMessage()));
   }
 
   private Mono<Throwable> handleError(ClientResponse res) {
@@ -87,12 +89,11 @@ public class AuthRestConsumer implements AuthGateway {
           .switchIfEmpty(
               Mono.error(
                   new RuntimeException(
-                      String.format("Invalid conversion to known class. Status: %s", status))))
+                      TemplateErrors.INVALID_CONVERSION_TO_CLASS.buildMsg(status))))
           .map(err -> this.handleKnownException(exceptionMap.get(status), err));
     }
 
-    return Mono.error(
-        new RuntimeException("Failed to communicate with auth gateway, status: " + status));
+    return Mono.error(new RuntimeException(PlainErrors.AUTH_GATEWAY_ERROR.getName() + status));
   }
 
   private Throwable handleKnownException(
