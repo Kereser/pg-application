@@ -59,8 +59,10 @@ public class SecurityConfig {
         .permitAll()
         .pathMatchers(ACTUATOR_PATHS)
         .permitAll()
-        .pathMatchers(HttpMethod.POST, RestConstants.ApplicationAPI.BASE)
-        .hasAnyAuthority(RoleConstants.CLIENT, RoleConstants.MANAGER, RoleConstants.ADMIN)
+        .pathMatchers(HttpMethod.POST, RestConstants.ApplicationAPI.APPLICATIONS)
+        .hasAnyAuthority(RoleConstants.CLIENT, RoleConstants.MANAGER)
+        .pathMatchers(HttpMethod.PATCH, RestConstants.ApplicationAPI.APPLICATION_ID)
+        .hasAuthority(RoleConstants.MANAGER)
         .anyExchange()
         .authenticated();
   }
