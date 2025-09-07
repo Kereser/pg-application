@@ -8,6 +8,8 @@ import java.util.Locale;
 import java.util.Random;
 import java.util.UUID;
 
+import co.com.crediya.application.model.CommonConstants;
+
 public class DataUtils {
   private DataUtils() {}
 
@@ -90,6 +92,11 @@ public class DataUtils {
 
   public static BigDecimal randomBigDecimal() {
     long value = RANDOM.nextLong(1_000_000L, 200_000_000L);
+    return BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP);
+  }
+
+  public static BigDecimal randomSalary() {
+    long value = RANDOM.nextLong(1_000_000L, CommonConstants.Amount.TEN_M.longValue());
     return BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP);
   }
 }

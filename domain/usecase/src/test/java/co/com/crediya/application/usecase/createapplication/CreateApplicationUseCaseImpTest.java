@@ -26,6 +26,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import co.com.crediya.application.model.CommonConstants;
 import co.com.crediya.application.model.application.Application;
+import co.com.crediya.application.model.application.dto.ApplicationDTOResponse;
+import co.com.crediya.application.model.application.dto.CreateApplicationCommand;
 import co.com.crediya.application.model.application.gateways.ApplicationRepository;
 import co.com.crediya.application.model.application.vo.Amount;
 import co.com.crediya.application.model.applicationstatus.ApplicationStatus;
@@ -33,8 +35,6 @@ import co.com.crediya.application.model.applicationstatus.ApplicationStatusName;
 import co.com.crediya.application.model.applicationstatus.gateways.ApplicationStatusRepository;
 import co.com.crediya.application.model.auth.UserSummary;
 import co.com.crediya.application.model.auth.gateway.AuthGateway;
-import co.com.crediya.application.model.dto.ApplicationDTOResponse;
-import co.com.crediya.application.model.dto.CreateApplicationCommand;
 import co.com.crediya.application.model.exceptions.EntityNotFoundException;
 import co.com.crediya.application.model.exceptions.IllegalValueForArgumentException;
 import co.com.crediya.application.model.exceptions.ResourceOwnershipException;
