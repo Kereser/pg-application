@@ -1,6 +1,5 @@
 server:
   port: 8081
-
 spring:
   application:
     name: "application-service"
@@ -16,7 +15,6 @@ spring:
     password: "${adapters.r2dbc.password}"
   profiles:
     include: null
-
 management:
   endpoints:
     web:
@@ -29,31 +27,29 @@ management:
   health:
     circuitbreakers:
       enabled: true
-
 cors:
   allowed-origins: "http://localhost:4200,http://localhost:8080"
-
 jwt:
-  secret: Sikret00-2$$_32.,/>>/SfgdskjlXDSF<>????94534906--=_+)I-w=5243=0-59=4+_)I*(+
-
+  secret: "Sikret00-2$$_32.,/>>/SfgdskjlXDSF<>????94534906--=_+)I-w=5243=0-59=4+_)I*(+"
 routes:
   paths:
     base: "/api/v1"
     application: "/applications"
     applicationsToReview: "/applications/manual_review"
-
 adapters:
   r2dbc:
-    host: ${DB_HOST:localhost}
-    port: ${DB_PORT:5432}
-    database: ${DB_NAME:application}
-    username: ${DB_USER:crediya}
-    password: ${DB_PASSWORD:P@55w0rd}
+    host: "${DB_HOST:localhost}"
+    port: "${DB_PORT:5432}"
+    database: "${DB_NAME:application}"
+    username: "${DB_USER:crediya}"
+    password: "${DB_PASSWORD:P@55w0rd}"
 adapter:
   restconsumer:
     timeout: 5000
-    url: ${AUTH_API_URL:http://localhost:8080/api}
-
+    url: "${AUTH_API_URL:http://localhost:8080}"
+  sqs:
+    region: "us-east-2"
+    queueUrl: "https://sqs.us-east-2.amazonaws.com/343629588964/application-notifications-queue"
 logging:
   level:
     org:
@@ -62,8 +58,7 @@ logging:
           reactive:
             function:
               client:
-                ExchangeFunctions: TRACE
-
+                ExchangeFunctions: "TRACE"
 resilience4j:
   circuitbreaker:
     instances:
