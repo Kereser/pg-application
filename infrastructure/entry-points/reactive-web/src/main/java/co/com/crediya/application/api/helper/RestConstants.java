@@ -23,8 +23,8 @@ public class RestConstants {
 
   @NoArgsConstructor(access = AccessLevel.PRIVATE)
   public static class ApplicationAPI {
-    public static final String ROOT = "/api/v1";
-    public static final String BASE = "/api/v1/applications";
-    public static final String REVIEW = "api/v1/applications/manual_review";
+    public static final String APPLICATIONS = "/api/v1/applications";
+    public static final String TO_REVIEW = "api/v1/applications/manual_review";
+    public static final String APPLICATION_ID = "api/v1/applications/{applicationId}";
   }
 }
