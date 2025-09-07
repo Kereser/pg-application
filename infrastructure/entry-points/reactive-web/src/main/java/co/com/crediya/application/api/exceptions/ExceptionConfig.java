@@ -7,10 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 
-import co.com.crediya.application.model.exceptions.EntityNotFoundException;
-import co.com.crediya.application.model.exceptions.IllegalValueForArgumentException;
-import co.com.crediya.application.model.exceptions.MissingValueOnRequiredFieldException;
-import co.com.crediya.application.model.exceptions.ResourceOwnershipException;
+import co.com.crediya.application.model.exceptions.*;
 
 @Configuration
 public class ExceptionConfig {
@@ -25,7 +22,11 @@ public class ExceptionConfig {
         EntityNotFoundException.class,
         HttpStatus.NOT_FOUND,
         ResourceOwnershipException.class,
-        HttpStatus.FORBIDDEN);
+        HttpStatus.FORBIDDEN,
+        MissingRequiredBodyException.class,
+        HttpStatus.BAD_REQUEST,
+        DuplicatedInfoException.class,
+        HttpStatus.CONFLICT);
   }
 
   @Bean
