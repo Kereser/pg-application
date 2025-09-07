@@ -5,7 +5,7 @@ import org.springframework.data.relational.core.query.Criteria;
 import org.springframework.data.relational.core.query.Query;
 import org.springframework.stereotype.Repository;
 
-import co.com.crediya.application.model.dto.GetApplicationFilteredCommand;
+import co.com.crediya.application.model.application.dto.GetApplicationFilteredCommand;
 import co.com.crediya.application.r2dbc.entity.ApplicationEntity;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Flux;
