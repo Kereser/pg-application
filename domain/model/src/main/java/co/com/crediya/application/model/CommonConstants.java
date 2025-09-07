@@ -83,6 +83,11 @@ public class CommonConstants {
   }
 
   @NoArgsConstructor(access = AccessLevel.PRIVATE)
+  public static class PathVariables {
+    public static final String APPLICATION_ID = "applicationId";
+  }
+
+  @NoArgsConstructor(access = AccessLevel.PRIVATE)
   public static class Endpoints {
     // Auth
     public static final String USERS = "/api/v1/users";
@@ -93,5 +98,27 @@ public class CommonConstants {
   public static class AuthConsumerCircuitBreaker {
     public static final String FIND_USER_BY_ID_NUMBER = "findUserByIdNumber";
     public static final String FIND_USER_BY_ID_IN = "findUserByIdIn";
+  }
+
+  @NoArgsConstructor(access = AccessLevel.PRIVATE)
+  public static class Docs {
+
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    public static class Application {
+      public static final String SAVE_SUMMARY = "Create a new application";
+      public static final String SAVE_DESCRIPTION = "Application creation request";
+      public static final String SAVE_OPERATION_ID = "createApplication";
+
+      public static final String GET_FOR_MANUAL_REVIEW_SUMMARY = "Get applications";
+      public static final String GET_FOR_MANUAL_REVIEW_DESCRIPTION =
+          "List of applications marked as manual review";
+      public static final String GET_FOR_MANUAL_REVIEW_OPERATION_ID =
+          "getApplicationsForManualReview";
+
+      public static final String PATCH_UPDATE_STATUS_SUMMARY = "Update application status";
+      public static final String PATCH_UPDATE_STATUS_DESCRIPTION =
+          "Update a given applicationId with new status";
+      public static final String PATCH_UPDATE_STATUS_OPERATION_ID = "updateApplicationStatus";
+    }
   }
 }
