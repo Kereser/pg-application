@@ -24,8 +24,10 @@ public class ApplicationStatusRepositoryAdapter
     implements ApplicationStatusRepository {
   private final TransactionalOperator txOperator;
 
-  private static final String LOG_FIND_BY_NAME_SUBSCRIBE = "Getting pending application status obj";
-  private static final String LOG_FIND_BY_NAME_SUCCESS = "Pending application status: {}";
+  private static final String LOG_FIND_BY_NAME_SUBSCRIBE =
+      "Getting pending application status obj for name: {}";
+  private static final String LOG_FIND_BY_NAME_SUCCESS =
+      "Retrieved application status: {}. By name: {}";
   private static final String LOG_FIND_BY_NAME_ERROR =
       "Could not find 'PENDING' application type. Details: {}";
 
@@ -57,8 +59,8 @@ public class ApplicationStatusRepositoryAdapter
         .findByName(statusName.getName())
         .map(super::toEntity)
         .as(txOperator::transactional)
-        .doOnSubscribe(sub -> log.info(LOG_FIND_BY_NAME_SUBSCRIBE))
-        .doOnSuccess(res -> log.info(LOG_FIND_BY_NAME_SUCCESS, res))
+        .doOnSubscribe(sub -> log.info(LOG_FIND_BY_NAME_SUBSCRIBE, statusName))
+        .doOnSuccess(res -> log.info(LOG_FIND_BY_NAME_SUCCESS, res, statusName))
         .doOnError(err -> log.error(LOG_FIND_BY_NAME_ERROR, err.getMessage()));
   }
 
