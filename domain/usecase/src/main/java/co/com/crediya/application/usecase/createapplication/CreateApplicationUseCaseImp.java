@@ -14,13 +14,17 @@ import co.com.crediya.application.model.applicationstatus.ApplicationStatusName;
 import co.com.crediya.application.model.applicationstatus.gateways.ApplicationStatusRepository;
 import co.com.crediya.application.model.auth.UserSummary;
 import co.com.crediya.application.model.auth.gateway.AuthGateway;
+import co.com.crediya.application.model.eventpublisher.dto.DebtEvaluationDTO;
+import co.com.crediya.application.model.eventpublisher.gateway.NotificationEventPublisher;
 import co.com.crediya.application.model.exceptions.*;
 import co.com.crediya.application.model.mapper.ApplicationMapper;
 import co.com.crediya.application.model.producttype.ProductType;
 import co.com.crediya.application.model.producttype.gateways.ProductTypeRepository;
 import co.com.crediya.application.model.producttype.vo.ProductName;
+import co.com.crediya.application.model.security.SecurityDetails;
 import co.com.crediya.application.model.security.SecurityGateway;
 import lombok.RequiredArgsConstructor;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RequiredArgsConstructor
@@ -30,38 +34,87 @@ public class CreateApplicationUseCaseImp implements CreateApplicationUseCase {
   private final ProductTypeRepository productTypeRepository;
   private final ApplicationStatusRepository appStatusRepository;
   private final SecurityGateway securityGateway;
-  private final ApplicationMapper mapper;
   private final AuthGateway authClient;
+  private final NotificationEventPublisher eventPublisher;
+
+  private final ApplicationMapper mapper;
+
+  private record Prerequisites(
+      UserSummary user,
+      ProductType productType,
+      ApplicationStatus pendingStatus,
+      ApplicationStatus approvedStatus) {}
+
+  private record ApplicationWithInfo(Prerequisites prerequisites, Application application) {}
 
   @Override
   public Mono<ApplicationDTOResponse> execute(CreateApplicationCommand command) {
-    IdNumber idNumber = new IdNumber(command.idNumber());
-    ProductName productName = new ProductName(command.productName());
+    // core validations
+    mapper.toEntityCommand(command);
 
-    Application application = mapper.toEntityCommand(command);
-
-    return Mono.zip(findUser(idNumber), findProduct(productName), findPending())
-        .flatMap(
-            tuple ->
-                validateResourceOwnership(tuple.getT1().id())
-                    .then(
-                        Mono.defer(
-                            () -> {
-                              runAmountValidation(tuple.getT2(), application);
-
-                              return Mono.just(
-                                  this.buildApplication(
-                                      tuple.getT1(), tuple.getT2(), tuple.getT3(), application));
-                            })))
-        .flatMap(applicationRepository::save)
+    return fetchPrerequisites(command)
+        .flatMap(prereqs -> this.validateAndBuildInitialApplication(command, prereqs))
+        .flatMapMany(
+            appWithInfo ->
+                this.mergeAndEnrichApplications(
+                    appWithInfo.application(), appWithInfo.prerequisites()))
+        .filter(Application::isPendingApplication)
+        .next()
         .map(mapper::toDTO);
   }
 
-  private Mono<UserSummary> findUser(IdNumber idNumber) {
-    return authClient.findUserByIdNumber(idNumber.value());
+  private Mono<Prerequisites> fetchPrerequisites(CreateApplicationCommand command) {
+    Mono<UserSummary> userMono = authClient.findUserByIdNumber(new IdNumber(command.idNumber()));
+
+    return Mono.zip(
+            userMono,
+            findProduct(new ProductName(command.productName())),
+            findAppStatusPending(),
+            findAppStatusApproved())
+        .map(
+            tuple -> new Prerequisites(tuple.getT1(), tuple.getT2(), tuple.getT3(), tuple.getT4()));
   }
 
-  private Mono<Void> validateResourceOwnership(UUID reqUserId) {
+  private Mono<ApplicationWithInfo> validateAndBuildInitialApplication(
+      CreateApplicationCommand command, Prerequisites prereqs) {
+    return validateResourceOwnership(prereqs.user().id())
+        .flatMap(
+            secUser -> {
+              Application initialApp = mapper.toEntityCommand(command);
+              runAmountValidation(prereqs.productType(), initialApp);
+
+              Application newApplication =
+                  this.buildApplication(
+                      prereqs.user(), prereqs.productType(), prereqs.pendingStatus(), initialApp);
+
+              return Mono.just(new ApplicationWithInfo(prereqs, newApplication));
+            });
+  }
+
+  private Flux<Application> mergeAndEnrichApplications(
+      Application newApplication, Prerequisites prerequisites) {
+    return applicationRepository
+        .save(newApplication)
+        .flatMapMany(
+            savedApp ->
+                Flux.concat(
+                        applicationRepository.findAllByUserIdAndApplicationStatusId(
+                            newApplication.getUserId(), prerequisites.approvedStatus.getId()),
+                        Mono.just(savedApp))
+                    .flatMap(this::enrichApplication)
+                    .collectList()
+                    .flatMapMany(
+                        appList -> {
+                          DebtEvaluationDTO dto =
+                              new DebtEvaluationDTO(prerequisites.user(), appList);
+
+                          return this.eventPublisher
+                              .publishDebtEvaluationQueue(dto)
+                              .thenMany(Flux.fromIterable(appList));
+                        }));
+  }
+
+  private Mono<SecurityDetails> validateResourceOwnership(UUID reqUserId) {
     return this.securityGateway
         .getDetailsFromContext()
         .switchIfEmpty(
@@ -71,7 +124,7 @@ public class CreateApplicationUseCaseImp implements CreateApplicationUseCase {
         .flatMap(
             usrDetails ->
                 usrDetails.userId().equals(reqUserId)
-                    ? Mono.empty()
+                    ? Mono.just(usrDetails)
                     : Mono.error(
                         new ResourceOwnershipException(
                             Fields.USER_ID.getName(), PlainErrors.OWNERSHIP.getName())));
@@ -79,7 +132,7 @@ public class CreateApplicationUseCaseImp implements CreateApplicationUseCase {
 
   private Mono<ProductType> findProduct(ProductName productName) {
     return productTypeRepository
-        .findByName(productName.value())
+        .findByName(productName)
         .switchIfEmpty(
             Mono.error(
                 new IllegalValueForArgumentException(
@@ -88,8 +141,12 @@ public class CreateApplicationUseCaseImp implements CreateApplicationUseCase {
                         Fields.PRODUCT_NAME.getName(), productName))));
   }
 
-  private Mono<ApplicationStatus> findPending() {
+  private Mono<ApplicationStatus> findAppStatusPending() {
     return appStatusRepository.findByName(ApplicationStatusName.PENDING);
+  }
+
+  private Mono<ApplicationStatus> findAppStatusApproved() {
+    return appStatusRepository.findByName(ApplicationStatusName.APPROVED);
   }
 
   private void runAmountValidation(ProductType productType, Application application) {
@@ -116,5 +173,37 @@ public class CreateApplicationUseCaseImp implements CreateApplicationUseCase {
         .productType(productType)
         .applicationStatus(status)
         .build();
+  }
+
+  private Mono<Application> enrichApplication(Application application) {
+    Mono<ApplicationStatus> statusMono =
+        appStatusRepository
+            .findById(application.getApplicationStatus().getId())
+            .switchIfEmpty(
+                Mono.error(
+                    new EntityNotFoundException(
+                        Entities.APPLICATION_STATUS.name(),
+                        TemplateErrors.X_NOT_FOUND_FOR_Y.buildMsg(
+                            Entities.APPLICATION_STATUS.name(),
+                            application.getApplicationStatus().getId()))));
+
+    Mono<ProductType> productTypeMono =
+        productTypeRepository
+            .findById(application.getProductType().getId())
+            .switchIfEmpty(
+                Mono.error(
+                    new EntityNotFoundException(
+                        Entities.PRODUCT_TYPE.name(),
+                        TemplateErrors.X_NOT_FOUND_FOR_Y.buildMsg(
+                            Entities.PRODUCT_TYPE.name(), application.getProductType().getId()))));
+
+    return statusMono
+        .zipWith(productTypeMono)
+        .map(
+            tuple ->
+                application.toBuilder()
+                    .applicationStatus(tuple.getT1())
+                    .productType(tuple.getT2())
+                    .build());
   }
 }
