@@ -69,6 +69,7 @@ public class CommonConstants {
   @NoArgsConstructor(access = AccessLevel.PRIVATE)
   public static class Security {
     public static final String BEARER = "Bearer ";
+    public static final String MANAGER_ROLE = "ROLE_MANAGER";
     public static final int TOKEN_SUB_STR_LEN = 7;
   }
 
