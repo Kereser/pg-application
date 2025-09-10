@@ -15,4 +15,6 @@ public interface ApplicationRepository {
   Mono<Long> countByFilers(GetApplicationFilteredCommand filters);
 
   Mono<Application> findById(UUID id);
+
+  Flux<Application> findAllByUserIdAndApplicationStatusId(UUID usrId, UUID applicationStatusId);
 }
