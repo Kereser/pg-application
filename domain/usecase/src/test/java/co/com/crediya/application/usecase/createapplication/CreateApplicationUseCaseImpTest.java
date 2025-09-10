@@ -3,12 +3,12 @@ package co.com.crediya.application.usecase.createapplication;
 import static co.com.crediya.application.usecase.createapplication.DataUtils.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -30,20 +30,25 @@ import co.com.crediya.application.model.application.dto.ApplicationDTOResponse;
 import co.com.crediya.application.model.application.dto.CreateApplicationCommand;
 import co.com.crediya.application.model.application.gateways.ApplicationRepository;
 import co.com.crediya.application.model.application.vo.Amount;
+import co.com.crediya.application.model.application.vo.IdNumber;
 import co.com.crediya.application.model.applicationstatus.ApplicationStatus;
 import co.com.crediya.application.model.applicationstatus.ApplicationStatusName;
 import co.com.crediya.application.model.applicationstatus.gateways.ApplicationStatusRepository;
 import co.com.crediya.application.model.auth.UserSummary;
 import co.com.crediya.application.model.auth.gateway.AuthGateway;
+import co.com.crediya.application.model.eventpublisher.dto.DebtEvaluationDTO;
+import co.com.crediya.application.model.eventpublisher.gateway.NotificationEventPublisher;
 import co.com.crediya.application.model.exceptions.EntityNotFoundException;
 import co.com.crediya.application.model.exceptions.IllegalValueForArgumentException;
 import co.com.crediya.application.model.exceptions.ResourceOwnershipException;
 import co.com.crediya.application.model.mapper.ApplicationMapper;
 import co.com.crediya.application.model.producttype.ProductType;
 import co.com.crediya.application.model.producttype.gateways.ProductTypeRepository;
+import co.com.crediya.application.model.producttype.vo.ProductName;
 import co.com.crediya.application.model.security.SecurityDetails;
 import co.com.crediya.application.model.security.SecurityGateway;
 import reactor.blockhound.BlockHound;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -57,8 +62,9 @@ class CreateApplicationUseCaseImpTest {
   @Mock private ProductTypeRepository productTypeRepository;
   @Mock private ApplicationStatusRepository appStatusRepository;
   @Mock private SecurityGateway securityGateway;
-  @Mock private ApplicationMapper mapper;
   @Mock private AuthGateway authClient;
+  @Mock private NotificationEventPublisher notificationEventPublisher;
+  @Mock private ApplicationMapper mapper;
 
   @Captor ArgumentCaptor<Application> captor;
 
@@ -67,10 +73,12 @@ class CreateApplicationUseCaseImpTest {
   private CreateApplicationCommand command;
   private UserSummary userSummary;
   private ProductType productType;
-  private ApplicationStatus applicationStatus;
-  private Application applicationToSave;
+  private ApplicationStatus approvedStatus, pendingStatus;
   private ApplicationDTOResponse responseDTO;
   private SecurityDetails securityDetails;
+
+  @Captor private ArgumentCaptor<DebtEvaluationDTO> eventCaptor;
+  private Application applicationFromCommand, savedApplication;
 
   BigDecimal amount = CommonConstants.Amount.FIVE_M;
   BigDecimal minVal = CommonConstants.Amount.ONE_M;
@@ -98,16 +106,29 @@ class CreateApplicationUseCaseImpTest {
             .minAmount(minVal)
             .maxAmount(maxVal)
             .build();
-    applicationStatus =
+    approvedStatus =
         new ApplicationStatus(
             UUID.randomUUID(),
-            ApplicationStatusName.PENDING,
-            ApplicationStatusName.PENDING.getName());
+            ApplicationStatusName.APPROVED,
+            ApplicationStatusName.APPROVED.getName());
 
-    applicationToSave = Application.builder().amount(new Amount(amount)).build();
-    Application savedApplication =
-        applicationToSave.toBuilder().id(UUID.randomUUID()).userId(userSummary.id()).build();
+    Application applicationToSave = Application.builder().amount(new Amount(amount)).build();
 
+    pendingStatus =
+        ApplicationStatus.builder()
+            .id(UUID.randomUUID())
+            .name(ApplicationStatusName.PENDING)
+            .build();
+    savedApplication =
+        applicationToSave.toBuilder()
+            .id(UUID.randomUUID())
+            .userId(userSummary.id())
+            .applicationStatus(pendingStatus)
+            .productType(productType)
+            .build();
+    securityDetails =
+        new SecurityDetails(
+            savedApplication.getUserId(), new ArrayList<>(Collections.singleton(randomName())));
     responseDTO =
         new ApplicationDTOResponse(
             savedApplication.getId(),
@@ -115,115 +136,145 @@ class CreateApplicationUseCaseImpTest {
             savedApplication.getUserId(),
             UUID.randomUUID(),
             UUID.randomUUID());
-
-    securityDetails =
-        new SecurityDetails(
-            savedApplication.getUserId(), new ArrayList<>(Collections.singleton(randomName())));
+    applicationFromCommand = Application.builder().amount(new Amount(command.amount())).build();
   }
 
   @Test
   void shouldCreateApplicationSuccessfully() {
-    when(mapper.toEntityCommand(command)).thenReturn(applicationToSave);
-
-    when(authClient.findUserByIdNumber(anyString())).thenReturn(Mono.just(userSummary));
-    when(productTypeRepository.findByName(anyString())).thenReturn(Mono.just(productType));
+    // Prerequisites
+    when(authClient.findUserByIdNumber(any(IdNumber.class))).thenReturn(Mono.just(userSummary));
+    when(productTypeRepository.findByName(any(ProductName.class)))
+        .thenReturn(Mono.just(productType));
     when(appStatusRepository.findByName(ApplicationStatusName.PENDING))
-        .thenReturn(Mono.just(applicationStatus));
+        .thenReturn(Mono.just(pendingStatus));
+    when(appStatusRepository.findByName(ApplicationStatusName.APPROVED))
+        .thenReturn(Mono.just(approvedStatus));
+
+    // validate ownership
+    when(mapper.toEntityCommand(command)).thenReturn(applicationFromCommand);
     when(securityGateway.getDetailsFromContext()).thenReturn(Mono.just(securityDetails));
 
+    // Enrich all apps
     when(applicationRepository.save(any(Application.class)))
-        .thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
+        .thenReturn(Mono.just(savedApplication));
+    when(applicationRepository.findAllByUserIdAndApplicationStatusId(
+            any(UUID.class), any(UUID.class)))
+        .thenReturn(Flux.empty());
+    when(appStatusRepository.findById(any(UUID.class))).thenReturn(Mono.just(pendingStatus));
+    when(productTypeRepository.findById(any(UUID.class))).thenReturn(Mono.just(productType));
 
+    // notification
+    when(notificationEventPublisher.publishDebtEvaluationQueue(any(DebtEvaluationDTO.class)))
+        .thenReturn(Mono.empty());
+
+    // Mapper
     when(mapper.toDTO(any(Application.class))).thenReturn(responseDTO);
 
     Mono<ApplicationDTOResponse> resultMono = createApplicationUseCase.execute(command);
+
     StepVerifier.create(resultMono).expectNext(responseDTO).verifyComplete();
 
-    verify(applicationRepository).save(captor.capture());
-    Application appToSave = captor.getValue();
-
-    assertThat(appToSave.getProductType()).isEqualTo(productType);
-    assertThat(appToSave.getApplicationStatus()).isEqualTo(applicationStatus);
-    assertThat(appToSave.getUserId()).isEqualTo(userSummary.id());
+    verify(notificationEventPublisher).publishDebtEvaluationQueue(eventCaptor.capture());
+    DebtEvaluationDTO publishedEvent = eventCaptor.getValue();
+    assertThat(publishedEvent.usr()).isEqualTo(userSummary);
+    assertThat(publishedEvent.applications()).hasSize(1);
+    assertThat(publishedEvent.applications().getFirst().getUserId())
+        .isEqualTo(savedApplication.getUserId());
+    assertThat(publishedEvent.applications().getFirst().getId())
+        .isEqualTo(savedApplication.getId());
   }
 
   @Test
   void shouldReturnErrorWhenProductTypeNotFound() {
-    when(mapper.toEntityCommand(command)).thenReturn(applicationToSave);
-
-    when(authClient.findUserByIdNumber(anyString())).thenReturn(Mono.just(userSummary));
+    when(authClient.findUserByIdNumber(any(IdNumber.class))).thenReturn(Mono.just(userSummary));
+    when(productTypeRepository.findByName(any(ProductName.class))).thenReturn(Mono.empty());
     when(appStatusRepository.findByName(ApplicationStatusName.PENDING))
-        .thenReturn(Mono.just(applicationStatus));
-
-    when(productTypeRepository.findByName(anyString())).thenReturn(Mono.empty());
+        .thenReturn(Mono.just(pendingStatus));
+    when(appStatusRepository.findByName(ApplicationStatusName.APPROVED))
+        .thenReturn(Mono.just(approvedStatus));
 
     Mono<ApplicationDTOResponse> resultMono = createApplicationUseCase.execute(command);
 
     StepVerifier.create(resultMono).expectError(IllegalValueForArgumentException.class).verify();
-
     verify(applicationRepository, never()).save(any(Application.class));
   }
 
   @ParameterizedTest
   @MethodSource("invalidAmountProvider")
   void shouldReturnErrorWhenAmountValidationFails(ProductType pType) {
-
-    when(mapper.toEntityCommand(command)).thenReturn(applicationToSave);
-
-    when(authClient.findUserByIdNumber(anyString())).thenReturn(Mono.just(userSummary));
+    when(mapper.toEntityCommand(command)).thenReturn(applicationFromCommand);
+    when(authClient.findUserByIdNumber(any(IdNumber.class))).thenReturn(Mono.just(userSummary));
+    when(productTypeRepository.findByName(any(ProductName.class))).thenReturn(Mono.just(pType));
     when(appStatusRepository.findByName(ApplicationStatusName.PENDING))
-        .thenReturn(Mono.just(applicationStatus));
-
-    when(productTypeRepository.findByName(anyString())).thenReturn(Mono.just(pType));
-
+        .thenReturn(Mono.just(pendingStatus));
+    when(appStatusRepository.findByName(ApplicationStatusName.APPROVED))
+        .thenReturn(Mono.just(approvedStatus));
     when(securityGateway.getDetailsFromContext()).thenReturn(Mono.just(securityDetails));
 
     Mono<ApplicationDTOResponse> resultMono = createApplicationUseCase.execute(command);
 
     StepVerifier.create(resultMono).expectError(IllegalValueForArgumentException.class).verify();
-
     verify(applicationRepository, never()).save(any(Application.class));
   }
 
   @Test
   void shouldReturnErrorWhenOwnershipInvalid() {
-    when(mapper.toEntityCommand(command)).thenReturn(applicationToSave);
-
-    when(authClient.findUserByIdNumber(anyString())).thenReturn(Mono.just(userSummary));
-    when(productTypeRepository.findByName(anyString())).thenReturn(Mono.just(productType));
+    SecurityDetails differentUserContext =
+        new SecurityDetails(UUID.randomUUID(), List.of(CommonConstants.Security.MANAGER_ROLE));
+    when(mapper.toEntityCommand(command)).thenReturn(applicationFromCommand);
+    when(authClient.findUserByIdNumber(any(IdNumber.class))).thenReturn(Mono.just(userSummary));
+    when(productTypeRepository.findByName(any(ProductName.class)))
+        .thenReturn(Mono.just(productType));
     when(appStatusRepository.findByName(ApplicationStatusName.PENDING))
-        .thenReturn(Mono.just(applicationStatus));
-    when(securityGateway.getDetailsFromContext())
-        .thenReturn(
-            Mono.just(
-                new SecurityDetails(
-                    UUID.randomUUID(),
-                    new ArrayList<>() {
-                      {
-                        add(randomName());
-                      }
-                    })));
+        .thenReturn(Mono.just(pendingStatus));
+    when(appStatusRepository.findByName(ApplicationStatusName.APPROVED))
+        .thenReturn(Mono.just(approvedStatus));
+    when(securityGateway.getDetailsFromContext()).thenReturn(Mono.just(differentUserContext));
 
+    // Act
     Mono<ApplicationDTOResponse> resMono = createApplicationUseCase.execute(command);
 
+    // Assert
     StepVerifier.create(resMono).expectError(ResourceOwnershipException.class).verify();
-
     verify(applicationRepository, never()).save(any(Application.class));
   }
 
   @Test
   void shouldReturnErrorWhenSecContextNotFound() {
-    when(mapper.toEntityCommand(command)).thenReturn(applicationToSave);
-
-    when(authClient.findUserByIdNumber(anyString())).thenReturn(Mono.just(userSummary));
-    when(productTypeRepository.findByName(anyString())).thenReturn(Mono.just(productType));
+    when(mapper.toEntityCommand(command)).thenReturn(applicationFromCommand);
+    when(authClient.findUserByIdNumber(any(IdNumber.class))).thenReturn(Mono.just(userSummary));
+    when(productTypeRepository.findByName(any(ProductName.class)))
+        .thenReturn(Mono.just(productType));
     when(appStatusRepository.findByName(ApplicationStatusName.PENDING))
-        .thenReturn(Mono.just(applicationStatus));
+        .thenReturn(Mono.just(pendingStatus));
+    when(appStatusRepository.findByName(ApplicationStatusName.APPROVED))
+        .thenReturn(Mono.just(approvedStatus));
     when(securityGateway.getDetailsFromContext()).thenReturn(Mono.empty());
 
     Mono<ApplicationDTOResponse> resMono = createApplicationUseCase.execute(command);
 
     StepVerifier.create(resMono).expectError(EntityNotFoundException.class).verify();
+    verify(applicationRepository, never()).save(any(Application.class));
+  }
+
+  @Test
+  void shouldReturnErrorOnOwnershipValidationFailure() {
+    SecurityDetails differentUserContext =
+        new SecurityDetails(UUID.randomUUID(), List.of(CommonConstants.Security.MANAGER_ROLE));
+
+    when(authClient.findUserByIdNumber(any(IdNumber.class))).thenReturn(Mono.just(userSummary));
+    when(productTypeRepository.findByName(any(ProductName.class)))
+        .thenReturn(Mono.just(productType));
+    when(appStatusRepository.findByName(ApplicationStatusName.PENDING))
+        .thenReturn(Mono.just(pendingStatus));
+    when(appStatusRepository.findByName(ApplicationStatusName.APPROVED))
+        .thenReturn(Mono.just(approvedStatus));
+
+    when(securityGateway.getDetailsFromContext()).thenReturn(Mono.just(differentUserContext));
+
+    Mono<ApplicationDTOResponse> resultMono = createApplicationUseCase.execute(command);
+
+    StepVerifier.create(resultMono).expectError(ResourceOwnershipException.class).verify();
 
     verify(applicationRepository, never()).save(any(Application.class));
   }

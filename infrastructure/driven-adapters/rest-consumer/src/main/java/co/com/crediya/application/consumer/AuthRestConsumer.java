@@ -13,6 +13,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import co.com.crediya.application.consumer.helper.AuthRestMapper;
 import co.com.crediya.application.model.CommonConstants;
+import co.com.crediya.application.model.application.vo.IdNumber;
 import co.com.crediya.application.model.auth.UserSummary;
 import co.com.crediya.application.model.auth.gateway.AuthGateway;
 import co.com.crediya.application.model.exceptions.*;
@@ -39,10 +40,10 @@ public class AuthRestConsumer implements AuthGateway {
 
   @Override
   @CircuitBreaker(name = CommonConstants.AuthConsumerCircuitBreaker.FIND_USER_BY_ID_NUMBER)
-  public Mono<UserSummary> findUserByIdNumber(String idNumber) {
+  public Mono<UserSummary> findUserByIdNumber(IdNumber idNumber) {
     return client
         .get()
-        .uri(CommonConstants.Endpoints.USERS_COMPLETE + idNumber)
+        .uri(CommonConstants.Endpoints.USERS_COMPLETE + idNumber.value())
         .retrieve()
         .onStatus(HttpStatusCode::isError, this::handleError)
         .bodyToMono(UserSummaryDTOResponse.class)

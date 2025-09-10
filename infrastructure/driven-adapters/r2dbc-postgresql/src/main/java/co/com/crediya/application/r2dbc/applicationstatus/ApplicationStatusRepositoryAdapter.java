@@ -25,11 +25,11 @@ public class ApplicationStatusRepositoryAdapter
   private final TransactionalOperator txOperator;
 
   private static final String LOG_FIND_BY_NAME_SUBSCRIBE =
-      "Getting pending application status obj for name: {}";
+      "Getting application status obj for name: {}";
   private static final String LOG_FIND_BY_NAME_SUCCESS =
       "Retrieved application status: {}. By name: {}";
   private static final String LOG_FIND_BY_NAME_ERROR =
-      "Could not find 'PENDING' application type. Details: {}";
+      "Could not find application type for name {}. Error: {}";
 
   private static final String LOG_SAVE_SUBSCRIBE = "Saving status {}";
   private static final String LOG_SAVE_SUCCESS = "Saved status: {}";
@@ -61,7 +61,7 @@ public class ApplicationStatusRepositoryAdapter
         .as(txOperator::transactional)
         .doOnSubscribe(sub -> log.info(LOG_FIND_BY_NAME_SUBSCRIBE, statusName))
         .doOnSuccess(res -> log.info(LOG_FIND_BY_NAME_SUCCESS, res, statusName))
-        .doOnError(err -> log.error(LOG_FIND_BY_NAME_ERROR, err.getMessage()));
+        .doOnError(err -> log.error(LOG_FIND_BY_NAME_ERROR, statusName, err.getMessage()));
   }
 
   @Override

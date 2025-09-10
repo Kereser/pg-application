@@ -7,6 +7,7 @@ import org.springframework.transaction.reactive.TransactionalOperator;
 
 import co.com.crediya.application.model.producttype.ProductType;
 import co.com.crediya.application.model.producttype.gateways.ProductTypeRepository;
+import co.com.crediya.application.model.producttype.vo.ProductName;
 import co.com.crediya.application.r2dbc.entity.ProductTypeEntity;
 import co.com.crediya.application.r2dbc.helper.ReactiveAdapterOperations;
 import co.com.crediya.application.r2dbc.producttype.mapper.ProductTypeMapperStandard;
@@ -44,9 +45,9 @@ public class ProductTypeRepositoryAdapter
   }
 
   @Override
-  public Mono<ProductType> findByName(String name) {
+  public Mono<ProductType> findByName(ProductName name) {
     return repository
-        .findByName(name)
+        .findByName(name.value())
         .map(super::toEntity)
         .as(txOperator::transactional)
         .doOnSubscribe(sub -> log.info(LOG_FIND_BY_NAME_SUBSCRIBE, name))

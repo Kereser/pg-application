@@ -2,6 +2,7 @@ package co.com.crediya.application.api;
 
 import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
@@ -59,7 +60,7 @@ public class Handler {
                     .doOnSubscribe(sub -> log.info(LOG_CREATE_SUBSCRIBE, cmd))
                     .doOnSuccess(dto -> log.info(LOG_CREATE_SUCCESS, dto))
                     .doOnError(err -> log.error(LOG_CREATE_ERROR, cmd, err.getMessage())))
-        .flatMap(res -> ServerResponse.ok().bodyValue(res));
+        .flatMap(res -> ServerResponse.status(HttpStatus.CREATED).bodyValue(res));
   }
 
   public Mono<ServerResponse> listenGetApplicationsForManualReview(ServerRequest req) {

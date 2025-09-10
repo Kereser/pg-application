@@ -32,12 +32,36 @@ public class ApplicationRepositoryAdapter
   private static final String LOG_FIND_BY_ID_ERROR =
       "Could not retrieve application for id: {}. Error: {}";
 
+  private static final String LOG_FIND_BY_USER_ID_AND_STATUS_ID_SUBSCRIBE =
+      "Getting applications for userId {} and statusId {}";
+  private static final String LOG_FIND_BY_USER_ID_AND_STATUS_ID_ERROR =
+      "Could not retrieve applications for userId: {} and statusId {}. Error: {}";
+
   public ApplicationRepositoryAdapter(
       ApplicationReactiveRepository repository,
       ApplicationMapperStandard mapper,
       TransactionalOperator txOperator) {
     super(repository, mapper::toEntity, mapper::toData);
     this.txOperator = txOperator;
+  }
+
+  @Override
+  public Flux<Application> findAllByUserIdAndApplicationStatusId(
+      UUID usrId, UUID applicationStatusId) {
+    return repository
+        .findAllByUserIdAndApplicationStatusId(usrId, applicationStatusId)
+        .map(super::toEntity)
+        .as(txOperator::transactional)
+        .doOnSubscribe(
+            sub ->
+                log.info(LOG_FIND_BY_USER_ID_AND_STATUS_ID_SUBSCRIBE, usrId, applicationStatusId))
+        .doOnError(
+            err ->
+                log.error(
+                    LOG_FIND_BY_USER_ID_AND_STATUS_ID_ERROR,
+                    usrId,
+                    applicationStatusId,
+                    err.getMessage()));
   }
 
   @Override
