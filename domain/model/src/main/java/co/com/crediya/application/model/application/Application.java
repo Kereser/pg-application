@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import co.com.crediya.application.model.application.vo.*;
 import co.com.crediya.application.model.applicationstatus.ApplicationStatus;
+import co.com.crediya.application.model.applicationstatus.ApplicationStatusName;
 import co.com.crediya.application.model.producttype.ProductType;
 import lombok.*;
 
@@ -20,4 +21,8 @@ public class Application {
   private ApplicationPeriod applicationPeriod;
   private ApplicationStatus applicationStatus;
   private ProductType productType;
+
+  public boolean isPendingApplication() {
+    return this.applicationStatus.getName().equals(ApplicationStatusName.PENDING);
+  }
 }
