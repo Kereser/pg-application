@@ -16,7 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import co.com.crediya.application.model.application.Application;
-import co.com.crediya.application.model.application.ApplicationSummary;
+import co.com.crediya.application.model.application.ApplicationUserSummary;
 import co.com.crediya.application.model.application.dto.GetApplicationFilteredCommand;
 import co.com.crediya.application.model.application.gateways.ApplicationRepository;
 import co.com.crediya.application.model.application.vo.Amount;
@@ -53,7 +53,7 @@ class FindAllToManualReviewUseCaseImpTest {
   private GetApplicationFilteredCommand command;
   private Application app1, app2;
   private UserSummary user1, user2;
-  private ApplicationSummary summary1, summary2;
+  private ApplicationUserSummary summary1, summary2;
   private ApplicationStatus pendingStatus;
   private ProductType productType;
 
@@ -127,7 +127,7 @@ class FindAllToManualReviewUseCaseImpTest {
             randomIdNumber());
 
     summary1 =
-        ApplicationSummary.builder()
+        ApplicationUserSummary.builder()
             .userId(user1.id())
             .email(user1.email())
             .name(user1.firstName())
@@ -140,7 +140,7 @@ class FindAllToManualReviewUseCaseImpTest {
             .build();
 
     summary2 =
-        ApplicationSummary.builder()
+        ApplicationUserSummary.builder()
             .userId(user2.id())
             .email(user2.email())
             .name(user2.firstName())
@@ -167,10 +167,10 @@ class FindAllToManualReviewUseCaseImpTest {
 
     when(authGateway.findUsersByIdIn(anySet())).thenReturn(Flux.just(user1, user2));
 
-    when(mapper.toSummary(any(Application.class), eq(user1))).thenReturn(summary1);
-    when(mapper.toSummary(any(Application.class), eq(user2))).thenReturn(summary2);
+    when(mapper.toAppUserSummary(any(Application.class), eq(user1))).thenReturn(summary1);
+    when(mapper.toAppUserSummary(any(Application.class), eq(user2))).thenReturn(summary2);
 
-    Mono<PageDTOResponse<ApplicationSummary>> resultMono = useCase.execute(command);
+    Mono<PageDTOResponse<ApplicationUserSummary>> resultMono = useCase.execute(command);
 
     StepVerifier.create(resultMono)
         .assertNext(
@@ -190,7 +190,7 @@ class FindAllToManualReviewUseCaseImpTest {
     when(applicationRepository.findAllFiltered(any())).thenReturn(Flux.empty());
     when(applicationRepository.countByFilers(any())).thenReturn(Mono.just(0L));
 
-    Mono<PageDTOResponse<ApplicationSummary>> resultMono = useCase.execute(command);
+    Mono<PageDTOResponse<ApplicationUserSummary>> resultMono = useCase.execute(command);
 
     StepVerifier.create(resultMono)
         .assertNext(

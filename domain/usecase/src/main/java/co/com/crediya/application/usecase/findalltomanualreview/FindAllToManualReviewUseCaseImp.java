@@ -5,7 +5,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import co.com.crediya.application.model.application.Application;
-import co.com.crediya.application.model.application.ApplicationSummary;
+import co.com.crediya.application.model.application.ApplicationUserSummary;
 import co.com.crediya.application.model.application.dto.GetApplicationFilteredCommand;
 import co.com.crediya.application.model.application.gateways.ApplicationRepository;
 import co.com.crediya.application.model.applicationstatus.ApplicationStatus;
@@ -44,7 +44,8 @@ public class FindAllToManualReviewUseCaseImp implements FindAllToManualReviewUse
       List<Application> applications, Long totalCount, Map<UUID, UserSummary> users) {}
 
   @Override
-  public Mono<PageDTOResponse<ApplicationSummary>> execute(GetApplicationFilteredCommand command) {
+  public Mono<PageDTOResponse<ApplicationUserSummary>> execute(
+      GetApplicationFilteredCommand command) {
 
     return injectManualStatusFilter(command)
         .flatMap(this::fetchCoreData)
@@ -86,16 +87,16 @@ public class FindAllToManualReviewUseCaseImp implements FindAllToManualReviewUse
         .map(tuple -> new EnrichedData(tuple.getT1(), core.totalCount(), tuple.getT2()));
   }
 
-  private PageDTOResponse<ApplicationSummary> buildFinalResponse(
+  private PageDTOResponse<ApplicationUserSummary> buildFinalResponse(
       EnrichedData allData, GetApplicationFilteredCommand command) {
 
     List<Application> enrichedApps = allData.applications();
     Long totalCount = allData.totalCount();
     Map<UUID, UserSummary> usersMap = allData.users();
 
-    List<ApplicationSummary> summaryList =
+    List<ApplicationUserSummary> summaryList =
         enrichedApps.stream()
-            .map(app -> mapper.toSummary(app, usersMap.get(app.getUserId())))
+            .map(app -> mapper.toAppUserSummary(app, usersMap.get(app.getUserId())))
             .toList();
 
     return new PageDTOResponse<>(totalCount, command.getPage(), command.getSize(), summaryList);
