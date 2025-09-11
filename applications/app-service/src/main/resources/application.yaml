@@ -51,6 +51,7 @@ adapter:
     region: "${AWS_REGION:us-east-2}"
     notificationsQueue: "${SENDER_NOTIFICATION_STATUS_QUEUE:https://sqs.us-east-2.amazonaws.com/343629588964/application-notifications-queue}"
     debtEvaluationQueue: "${SENDER_DEBT_EVALUATION_QUEUE:https://sqs.us-east-2.amazonaws.com/343629588964/applications-debt-evaluation-queue}"
+    approvedStatusQueue: "${SENDER_APPROVED_STATUS_QUEUE:https://sqs.us-east-2.amazonaws.com/343629588964/application-status-approved-queue}"
 logging:
   level:
     org:
