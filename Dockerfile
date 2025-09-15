@@ -1,8 +1,11 @@
 FROM amazoncorretto:21 AS builder
 WORKDIR /workspace
 
+COPY build.gradle settings.gradle main.gradle gradlew ./
+COPY gradle ./gradle
+RUN chmod +x ./gradlew && ./gradlew dependencies --no-daemon
+
 COPY . .
-RUN chmod +x ./gradlew || true
 RUN ./gradlew clean build -x test --no-daemon
 
 FROM amazoncorretto:21-alpine
