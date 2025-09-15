@@ -9,6 +9,7 @@ import org.mapstruct.MappingConstants;
 
 import co.com.crediya.application.model.application.Application;
 import co.com.crediya.application.model.application.ApplicationSummary;
+import co.com.crediya.application.model.application.ApplicationUserSummary;
 import co.com.crediya.application.model.application.dto.ApplicationDTOResponse;
 import co.com.crediya.application.model.application.dto.CreateApplicationCommand;
 import co.com.crediya.application.model.application.vo.Amount;
@@ -54,11 +55,15 @@ public interface ApplicationMapperStandard extends ApplicationMapper {
   @Mapping(target = "status", source = "application.applicationStatus")
   @Mapping(target = "amount", source = "application.amount.value")
   @Mapping(target = "applicationPeriod", source = "application.applicationPeriod.value")
-  @Mapping(target = "interestRate", source = "application.productType.interestRate")
-  @Mapping(target = "totalApprovedDebt", ignore = true)
+  @Mapping(target = "monthPayment", source = "application.monthPayment")
   @Mapping(target = "name", source = "user.firstName")
   @Mapping(target = "id", source = "application.id")
-  ApplicationSummary toSummary(Application application, UserSummary user);
+  ApplicationUserSummary toAppUserSummary(Application application, UserSummary user);
+
+  @Override
+  @Mapping(target = "amount", source = "application.amount.value")
+  @Mapping(target = "applicationPeriod", source = "application.applicationPeriod.value")
+  ApplicationSummary toSummary(Application application);
 
   @Override
   @Mapping(target = "applicationId", source = "application.id")

@@ -16,7 +16,7 @@ import co.com.crediya.application.api.dto.CreateApplicationDTORequest;
 import co.com.crediya.application.api.dto.UpdateApplicationStatusDTORequest;
 import co.com.crediya.application.api.exceptions.ErrorResponseDTO;
 import co.com.crediya.application.model.CommonConstants;
-import co.com.crediya.application.model.application.ApplicationSummary;
+import co.com.crediya.application.model.application.ApplicationUserSummary;
 import co.com.crediya.application.model.application.dto.ApplicationDTOResponse;
 import co.com.crediya.application.model.application.dto.GetApplicationFilteredCommand;
 import lombok.AccessLevel;
@@ -75,7 +75,7 @@ public class ApplicationAPIDocs {
                     .content(
                         contentBuilder()
                             .mediaType(MediaType.APPLICATION_JSON_VALUE)
-                            .schema(schemaBuilder().implementation(ApplicationSummary.class))))
+                            .schema(schemaBuilder().implementation(ApplicationUserSummary.class))))
             .response(
                 responseBuilder()
                     .responseCode(HttpStatus.BAD_REQUEST.name())

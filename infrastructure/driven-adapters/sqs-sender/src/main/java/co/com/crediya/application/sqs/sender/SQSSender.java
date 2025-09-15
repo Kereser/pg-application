@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import co.com.crediya.application.model.application.Application;
+import co.com.crediya.application.model.application.ApplicationSummary;
 import co.com.crediya.application.model.eventpublisher.dto.DebtEvaluationDTO;
 import co.com.crediya.application.model.eventpublisher.gateway.NotificationEventPublisher;
 import co.com.crediya.application.model.sqs.SqsSummaryDTO;
@@ -35,6 +36,11 @@ public class SQSSender implements NotificationEventPublisher {
       "Sending msg to debt evaluation. Msg id {}";
   private static final String LOG_DEBT_EVALUATION_ERROR =
       "Unable to send message to debt evaluation queue. Error: {}";
+
+  private static final String LOG_APPROVED_APPLICATION_SUCCESS =
+      "Sending msg to approved application queue. Msg id {}";
+  private static final String LOG_APPROVED_APPLICATION_ERROR =
+      "Unable to send message to approved application queue. Error: {}";
 
   @Override
   public Mono<Void> publishStatusUpdate(SqsSummaryDTO sqsSummaryDTO) {
@@ -91,6 +97,24 @@ public class SQSSender implements NotificationEventPublisher {
         .doOnNext(res -> log.info(LOG_DEBT_EVALUATION_SUCCESS, res.messageId()))
         .then()
         .doOnError(err -> log.error(LOG_DEBT_EVALUATION_ERROR, err.getMessage()));
+  }
+
+  @Override
+  public Mono<Void> publishApprovedApplication(ApplicationSummary appSummary) {
+    return Mono.fromCallable(() -> mapper.writeValueAsString(appSummary))
+        .flatMap(
+            msg -> {
+              SendMessageRequest req =
+                  SendMessageRequest.builder()
+                      .queueUrl(properties.approvedStatusQueue())
+                      .messageBody(msg)
+                      .build();
+
+              return Mono.fromFuture(client.sendMessage(req));
+            })
+        .doOnNext(res -> log.info(LOG_APPROVED_APPLICATION_SUCCESS, res.messageId()))
+        .then()
+        .doOnError(err -> log.error(LOG_APPROVED_APPLICATION_ERROR, err.getMessage()));
   }
 
   private record UpdateStatusEvent(UUID applicationId, String email, String name, String status) {}

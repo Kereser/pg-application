@@ -29,48 +29,98 @@ public class UpdateApplicationStatusUseCaseImp implements UpdateApplicationStatu
 
   private final ApplicationMapper mapper;
 
-  private record FlowData(Application application, ApplicationStatus applicationStatus) {}
+  private record OperationData(
+      Application application,
+      ApplicationStatus newStatus,
+      ApplicationStatus approvedStatus,
+      Application updatedApplication,
+      UserSummary user) {
 
-  private record SqsSummaryData(Application application, UserSummary userSummary) {}
+    OperationData(Application app, ApplicationStatus newStatus, ApplicationStatus approvedStatus) {
+      this(app, newStatus, approvedStatus, null, null);
+    }
+
+    OperationData withUpdatedApplication(Application app) {
+      return new OperationData(
+          this.application, this.newStatus, this.approvedStatus, app, this.user);
+    }
+
+    OperationData withUser(UserSummary user) {
+      return new OperationData(
+          this.application, this.newStatus, this.approvedStatus, this.updatedApplication, user);
+    }
+  }
 
   @Override
   public Mono<Void> execute(UpdateApplicationStatusCommand command) {
     return preFetch(command)
-        .map(res -> assertNewStatus(res, command))
-        .flatMap(this::saveNewAppStatus)
-        .flatMap(this::enrichApplication)
-        .flatMap(app -> this.findUser(app.getUserId()).map(usr -> new SqsSummaryData(app, usr)))
-        .map(summaryData -> mapper.toSqsSummary(summaryData.application, summaryData.userSummary))
-        .flatMap(notificationEventPublisher::publishStatusUpdate)
+        .flatMap(this::validateStatusChange)
+        .flatMap(this::saveAppWithNewStatus)
+        .flatMap(this::performPostSaveActions)
+        .flatMap(this::publishEvents)
         .then();
   }
 
-  private Mono<FlowData> preFetch(UpdateApplicationStatusCommand command) {
+  private Mono<OperationData> preFetch(UpdateApplicationStatusCommand command) {
     return Mono.zip(
             findApplicationById(command.applicationId()),
-            findApplicationStatusByName(command.newStatus()))
-        .map(tuple -> new FlowData(tuple.getT1(), tuple.getT2()));
+            findApplicationStatusByName(command.newStatus()),
+            findApplicationStatusByName(ApplicationStatusName.APPROVED.getName()))
+        .map(tuple -> new OperationData(tuple.getT1(), tuple.getT2(), tuple.getT3()));
   }
 
-  private Mono<Application> saveNewAppStatus(FlowData data) {
-    Application appToSave =
-        data.application().toBuilder().applicationStatus(data.applicationStatus()).build();
+  private Mono<OperationData> performPostSaveActions(OperationData data) {
+    Mono<Application> enrichedAppMono = this.enrichApplication(data.updatedApplication());
+    Mono<UserSummary> userMono = findUser(data.updatedApplication().getUserId());
 
-    return applicationRepository.save(appToSave);
+    return Mono.zip(enrichedAppMono, userMono)
+        .map(
+            tuple -> {
+              Application enrichedApp = tuple.getT1();
+              UserSummary user = tuple.getT2();
+
+              return data.withUpdatedApplication(enrichedApp).withUser(user);
+            });
   }
 
-  private FlowData assertNewStatus(FlowData data, UpdateApplicationStatusCommand command) {
-    if (data.application()
-        .getApplicationStatus()
-        .getId()
-        .equals(data.applicationStatus().getId())) {
-      throw new DuplicatedInfoException(
-          Entities.APPLICATION_STATUS.name(),
-          TemplateErrors.X_ALREADY_ASSIGNED_FOR_Y.buildMsg(
-              command.newStatus(), command.applicationId()));
+  private Mono<Void> publishEvents(OperationData data) {
+    Mono<Void> statusUpdateEvent =
+        Mono.defer(
+            () ->
+                notificationEventPublisher.publishStatusUpdate(
+                    mapper.toSqsSummary(data.updatedApplication(), data.user())));
+
+    boolean isApproved = data.newStatus().getId().equals(data.approvedStatus().getId());
+
+    if (isApproved) {
+      Mono<Void> approvedEvent =
+          Mono.defer(
+              () ->
+                  notificationEventPublisher.publishApprovedApplication(
+                      mapper.toSummary(data.updatedApplication())));
+
+      return Mono.when(statusUpdateEvent, approvedEvent);
+    } else {
+      return statusUpdateEvent;
     }
+  }
 
-    return data;
+  private Mono<OperationData> saveAppWithNewStatus(OperationData data) {
+    Application appToSave =
+        data.application().toBuilder().applicationStatus(data.newStatus()).build();
+
+    return applicationRepository.save(appToSave).map(data::withUpdatedApplication);
+  }
+
+  private Mono<OperationData> validateStatusChange(OperationData data) {
+    if (data.application().getApplicationStatus().getId().equals(data.newStatus().getId())) {
+      return Mono.error(
+          new DuplicatedInfoException(
+              Entities.APPLICATION_STATUS.name(),
+              TemplateErrors.X_ALREADY_ASSIGNED_FOR_Y.buildMsg(
+                  data.newStatus().getName(), data.application().getId())));
+    }
+    return Mono.just(data);
   }
 
   private Mono<Application> findApplicationById(UUID applicationId) {

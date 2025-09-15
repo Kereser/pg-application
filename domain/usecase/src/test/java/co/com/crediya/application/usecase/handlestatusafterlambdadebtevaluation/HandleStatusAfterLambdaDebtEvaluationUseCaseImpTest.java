@@ -16,11 +16,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import co.com.crediya.application.model.application.Application;
+import co.com.crediya.application.model.application.ApplicationSummary;
 import co.com.crediya.application.model.application.gateways.ApplicationRepository;
 import co.com.crediya.application.model.applicationstatus.ApplicationStatus;
 import co.com.crediya.application.model.applicationstatus.ApplicationStatusName;
 import co.com.crediya.application.model.applicationstatus.gateways.ApplicationStatusRepository;
 import co.com.crediya.application.model.eventpublisher.dto.DebtEvaluationDTOInput;
+import co.com.crediya.application.model.eventpublisher.gateway.NotificationEventPublisher;
+import co.com.crediya.application.model.mapper.ApplicationMapper;
 import reactor.blockhound.BlockHound;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -34,6 +37,8 @@ class HandleStatusAfterLambdaDebtEvaluationUseCaseImpTest {
 
   @Mock private ApplicationRepository applicationRepository;
   @Mock private ApplicationStatusRepository applicationStatusRepository;
+  @Mock private ApplicationMapper applicationMapper;
+  @Mock private NotificationEventPublisher notificationEventPublisher;
 
   @InjectMocks private HandleStatusAfterLambdaDebtEvaluationUseCaseImp useCase;
 
@@ -41,7 +46,7 @@ class HandleStatusAfterLambdaDebtEvaluationUseCaseImpTest {
 
   private DebtEvaluationDTOInput dto;
   private Application existingApplication;
-  private ApplicationStatus newStatus;
+  private ApplicationStatus approvedStatus, rejectStatus;
 
   private static final String TYPE = "type";
 
@@ -55,19 +60,36 @@ class HandleStatusAfterLambdaDebtEvaluationUseCaseImpTest {
         new DebtEvaluationDTOInput(
             TYPE,
             new DebtEvaluationDTOInput.Payload(appId, ApplicationStatusName.PENDING.getName()));
-    newStatus = ApplicationStatus.builder().name(ApplicationStatusName.APPROVED).build();
+    approvedStatus =
+        ApplicationStatus.builder()
+            .id(UUID.randomUUID())
+            .name(ApplicationStatusName.APPROVED)
+            .build();
+    rejectStatus =
+            ApplicationStatus.builder()
+                    .id(UUID.randomUUID())
+                    .name(ApplicationStatusName.REJECTED)
+                    .build();
+
     existingApplication = Application.builder().id(appId).applicationStatus(currentStatus).build();
   }
 
   @Test
   void shouldUpdateApplicationStatusSuccessfully() {
+    //prefetch
     when(applicationRepository.findById(dto.getPayload().getApplicationId()))
         .thenReturn(Mono.just(existingApplication));
     when(applicationStatusRepository.findByName(any(ApplicationStatusName.class)))
-        .thenReturn(Mono.just(newStatus));
+        .thenReturn(Mono.just(approvedStatus));
 
+    //save
     when(applicationRepository.save(any(Application.class)))
         .thenAnswer(res -> Mono.just(res.getArguments()[0]));
+
+    // publish event if applies
+    when(applicationMapper.toSummary(any(Application.class)))
+        .thenReturn(ApplicationSummary.builder().id(existingApplication.getId()).build());
+    when(notificationEventPublisher.publishApprovedApplication(any())).thenReturn(Mono.empty());
 
     Mono<Void> resultMono = useCase.execute(dto);
 
@@ -75,7 +97,31 @@ class HandleStatusAfterLambdaDebtEvaluationUseCaseImpTest {
 
     verify(applicationRepository).save(applicationCaptor.capture());
     assertThat(applicationCaptor.getValue().getApplicationStatus().getName())
-        .isEqualTo(newStatus.getName());
+        .isEqualTo(approvedStatus.getName());
+  }
+
+  @Test
+  void shouldNOTSentEventoToApprovedQueueIfNotApprovedApplication() {
+    //prefetch
+    when(applicationRepository.findById(dto.getPayload().getApplicationId()))
+            .thenReturn(Mono.just(existingApplication));
+    when(applicationStatusRepository.findByName(any(ApplicationStatusName.class))).thenReturn(Mono.just(rejectStatus));
+    when(applicationStatusRepository.findByName(ApplicationStatusName.APPROVED))
+            .thenReturn(Mono.just(approvedStatus));
+
+    //save
+    when(applicationRepository.save(any(Application.class)))
+            .thenAnswer(res -> Mono.just(res.getArguments()[0]));
+
+    Mono<Void> resultMono = useCase.execute(dto);
+
+    StepVerifier.create(resultMono).verifyComplete();
+
+    verify(applicationRepository).save(applicationCaptor.capture());
+    verify(notificationEventPublisher, never()).publishApprovedApplication(any());
+
+    assertThat(applicationCaptor.getValue().getApplicationStatus().getName())
+            .isEqualTo(rejectStatus.getName());
   }
 
   @Test
@@ -89,7 +135,7 @@ class HandleStatusAfterLambdaDebtEvaluationUseCaseImpTest {
 
     StepVerifier.create(resultMono).verifyComplete();
 
-    verify(applicationStatusRepository, times(1)).findByName(any());
+    verify(applicationStatusRepository, times(2)).findByName(any());
     verify(applicationRepository, never()).save(any());
   }
 

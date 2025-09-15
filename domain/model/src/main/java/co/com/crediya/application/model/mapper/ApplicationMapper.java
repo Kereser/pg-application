@@ -2,6 +2,7 @@ package co.com.crediya.application.model.mapper;
 
 import co.com.crediya.application.model.application.Application;
 import co.com.crediya.application.model.application.ApplicationSummary;
+import co.com.crediya.application.model.application.ApplicationUserSummary;
 import co.com.crediya.application.model.application.dto.ApplicationDTOResponse;
 import co.com.crediya.application.model.application.dto.CreateApplicationCommand;
 import co.com.crediya.application.model.auth.UserSummary;
@@ -12,7 +13,9 @@ public interface ApplicationMapper {
 
   ApplicationDTOResponse toDTO(Application entity);
 
-  ApplicationSummary toSummary(Application application, UserSummary user);
+  ApplicationUserSummary toAppUserSummary(Application application, UserSummary user);
+
+  ApplicationSummary toSummary(Application application);
 
   SqsSummaryDTO toSqsSummary(Application application, UserSummary user);
 }
