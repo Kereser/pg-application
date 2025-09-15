@@ -134,7 +134,6 @@ class FindAllToManualReviewUseCaseImpTest {
             .baseSalary(user1.baseSalary())
             .productType(productType)
             .status(pendingStatus)
-            .interestRate(productType.getInterestRate())
             .amount(app1.getAmount().value())
             .applicationPeriod(app1.getApplicationPeriod().value())
             .build();
@@ -147,7 +146,6 @@ class FindAllToManualReviewUseCaseImpTest {
             .baseSalary(user2.baseSalary())
             .productType(productType)
             .status(pendingStatus)
-            .interestRate(productType.getInterestRate())
             .amount(app2.getAmount().value())
             .applicationPeriod(app2.getApplicationPeriod().value())
             .build();
