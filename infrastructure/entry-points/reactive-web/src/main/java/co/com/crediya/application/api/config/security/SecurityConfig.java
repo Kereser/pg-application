@@ -7,7 +7,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 
-import co.com.crediya.application.api.config.Routes;
 import co.com.crediya.application.api.config.security.implementations.JwtSecurityContextRepository;
 import co.com.crediya.application.api.helper.RestConstants;
 import co.com.crediya.application.model.RoleConstants;
@@ -20,7 +19,6 @@ import reactor.core.publisher.Mono;
 @Slf4j
 public class SecurityConfig {
   private final JwtSecurityContextRepository securityContextRepository;
-  private final Routes routes;
 
   public static final String SWAGGER_PATH = "/swagger-ui.html";
   public static final String SWAGGER_PATH_1 = "/swagger-ui/**";
