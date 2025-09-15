@@ -66,23 +66,23 @@ class HandleStatusAfterLambdaDebtEvaluationUseCaseImpTest {
             .name(ApplicationStatusName.APPROVED)
             .build();
     rejectStatus =
-            ApplicationStatus.builder()
-                    .id(UUID.randomUUID())
-                    .name(ApplicationStatusName.REJECTED)
-                    .build();
+        ApplicationStatus.builder()
+            .id(UUID.randomUUID())
+            .name(ApplicationStatusName.REJECTED)
+            .build();
 
     existingApplication = Application.builder().id(appId).applicationStatus(currentStatus).build();
   }
 
   @Test
   void shouldUpdateApplicationStatusSuccessfully() {
-    //prefetch
+    // prefetch
     when(applicationRepository.findById(dto.getPayload().getApplicationId()))
         .thenReturn(Mono.just(existingApplication));
     when(applicationStatusRepository.findByName(any(ApplicationStatusName.class)))
         .thenReturn(Mono.just(approvedStatus));
 
-    //save
+    // save
     when(applicationRepository.save(any(Application.class)))
         .thenAnswer(res -> Mono.just(res.getArguments()[0]));
 
@@ -102,16 +102,17 @@ class HandleStatusAfterLambdaDebtEvaluationUseCaseImpTest {
 
   @Test
   void shouldNOTSentEventoToApprovedQueueIfNotApprovedApplication() {
-    //prefetch
+    // prefetch
     when(applicationRepository.findById(dto.getPayload().getApplicationId()))
-            .thenReturn(Mono.just(existingApplication));
-    when(applicationStatusRepository.findByName(any(ApplicationStatusName.class))).thenReturn(Mono.just(rejectStatus));
+        .thenReturn(Mono.just(existingApplication));
+    when(applicationStatusRepository.findByName(any(ApplicationStatusName.class)))
+        .thenReturn(Mono.just(rejectStatus));
     when(applicationStatusRepository.findByName(ApplicationStatusName.APPROVED))
-            .thenReturn(Mono.just(approvedStatus));
+        .thenReturn(Mono.just(approvedStatus));
 
-    //save
+    // save
     when(applicationRepository.save(any(Application.class)))
-            .thenAnswer(res -> Mono.just(res.getArguments()[0]));
+        .thenAnswer(res -> Mono.just(res.getArguments()[0]));
 
     Mono<Void> resultMono = useCase.execute(dto);
 
@@ -121,7 +122,7 @@ class HandleStatusAfterLambdaDebtEvaluationUseCaseImpTest {
     verify(notificationEventPublisher, never()).publishApprovedApplication(any());
 
     assertThat(applicationCaptor.getValue().getApplicationStatus().getName())
-            .isEqualTo(rejectStatus.getName());
+        .isEqualTo(rejectStatus.getName());
   }
 
   @Test

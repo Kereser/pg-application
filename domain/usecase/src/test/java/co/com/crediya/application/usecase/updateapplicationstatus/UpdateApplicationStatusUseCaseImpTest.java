@@ -79,10 +79,10 @@ class UpdateApplicationStatusUseCaseImpTest {
             .name(ApplicationStatusName.APPROVED)
             .build();
     rejectStatus =
-            ApplicationStatus.builder()
-                    .id(UUID.randomUUID())
-                    .name(ApplicationStatusName.REJECTED)
-                    .build();
+        ApplicationStatus.builder()
+            .id(UUID.randomUUID())
+            .name(ApplicationStatusName.REJECTED)
+            .build();
 
     existingApplication =
         Application.builder()
@@ -106,18 +106,19 @@ class UpdateApplicationStatusUseCaseImpTest {
 
   @Test
   void shouldUpdateStatusAndPublishEventSuccessfully() {
-    //prefetch
+    // prefetch
     when(applicationRepository.findById(command.applicationId()))
-            .thenReturn(Mono.just(existingApplication));
+        .thenReturn(Mono.just(existingApplication));
     when(applicationStatusRepository.findByName(ApplicationStatusName.APPROVED))
-            .thenReturn(Mono.just(approveStatus));
+        .thenReturn(Mono.just(approveStatus));
 
-    //save
+    // save
     when(applicationRepository.save(any(Application.class)))
-            .thenAnswer(argument -> Mono.just(argument.getArguments()[0]));
+        .thenAnswer(argument -> Mono.just(argument.getArguments()[0]));
 
-    //post save actions
-    when(applicationStatusRepository.findById(any(UUID.class))).thenReturn(Mono.just(approveStatus));
+    // post save actions
+    when(applicationStatusRepository.findById(any(UUID.class)))
+        .thenReturn(Mono.just(approveStatus));
     when(productTypeRepository.findById(any(UUID.class))).thenReturn(Mono.just(new ProductType()));
     when(authClient.findUsersByIdIn(Set.of(existingApplication.getUserId())))
         .thenReturn(Flux.just(userSummary));
@@ -141,31 +142,33 @@ class UpdateApplicationStatusUseCaseImpTest {
 
   @Test
   void shouldIgnoreApprovedStatusPublishEventIfStatusIsNotApproved() {
-    command = new UpdateApplicationStatusCommand(UUID.randomUUID(), ApplicationStatusName.REJECTED.getName());
+    command =
+        new UpdateApplicationStatusCommand(
+            UUID.randomUUID(), ApplicationStatusName.REJECTED.getName());
 
-    //prefetch
+    // prefetch
     when(applicationRepository.findById(command.applicationId()))
-            .thenReturn(Mono.just(existingApplication));
+        .thenReturn(Mono.just(existingApplication));
     when(applicationStatusRepository.findByName(ApplicationStatusName.APPROVED))
-            .thenReturn(Mono.just(approveStatus));
+        .thenReturn(Mono.just(approveStatus));
     when(applicationStatusRepository.findByName(ApplicationStatusName.REJECTED))
-            .thenReturn(Mono.just(rejectStatus));
+        .thenReturn(Mono.just(rejectStatus));
 
-    //save
+    // save
     when(applicationRepository.save(any(Application.class)))
-            .thenAnswer(argument -> Mono.just(argument.getArguments()[0]));
+        .thenAnswer(argument -> Mono.just(argument.getArguments()[0]));
 
-    //post save actions
+    // post save actions
     when(applicationStatusRepository.findById(any(UUID.class))).thenReturn(Mono.just(rejectStatus));
     when(productTypeRepository.findById(any(UUID.class))).thenReturn(Mono.just(new ProductType()));
     when(authClient.findUsersByIdIn(Set.of(existingApplication.getUserId())))
-            .thenReturn(Flux.just(userSummary));
+        .thenReturn(Flux.just(userSummary));
 
-    //publish events
+    // publish events
     when(mapper.toSqsSummary(any(Application.class), any(UserSummary.class)))
-            .thenReturn(summaryDTO);
+        .thenReturn(summaryDTO);
     when(notificationEventPublisher.publishStatusUpdate(any(SqsSummaryDTO.class)))
-            .thenReturn(Mono.empty());
+        .thenReturn(Mono.empty());
 
     Mono<Void> resultMono = useCase.execute(command);
 
@@ -180,7 +183,7 @@ class UpdateApplicationStatusUseCaseImpTest {
 
   @Test
   void shouldReturnErrorWhenApplicationNotFound() {
-    //prefetch
+    // prefetch
     when(applicationRepository.findById(command.applicationId())).thenReturn(Mono.empty());
     when(applicationStatusRepository.findByName(ApplicationStatusName.APPROVED))
         .thenReturn(Mono.just(approveStatus));
@@ -198,7 +201,7 @@ class UpdateApplicationStatusUseCaseImpTest {
         new UpdateApplicationStatusCommand(
             existingApplication.getId(), ApplicationStatusName.PENDING.getName());
 
-    //prefetch
+    // prefetch
     when(applicationRepository.findById(duplicateCommand.applicationId()))
         .thenReturn(Mono.just(existingApplication));
     when(applicationStatusRepository.findByName(ApplicationStatusName.PENDING))
