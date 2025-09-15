@@ -2,17 +2,17 @@ package co.com.crediya.application.r2dbc.config;
 
 import java.time.Duration;
 
-import io.r2dbc.postgresql.client.SSLMode;
-import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 
 import io.r2dbc.pool.ConnectionPool;
 import io.r2dbc.pool.ConnectionPoolConfiguration;
 import io.r2dbc.postgresql.PostgresqlConnectionConfiguration;
 import io.r2dbc.postgresql.PostgresqlConnectionFactory;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
+import io.r2dbc.postgresql.client.SSLMode;
+import lombok.AllArgsConstructor;
 
 @Configuration
 @AllArgsConstructor
