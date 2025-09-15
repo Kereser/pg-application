@@ -40,18 +40,25 @@ public class ApplicationAPIDocs {
                                 schemaBuilder().implementation(CreateApplicationDTORequest.class))))
             .response(
                 responseBuilder()
-                    .responseCode(HttpStatus.OK.name())
+                    .responseCode(RestConstants.StatusCodeInt.CREATED)
                     .content(
                         contentBuilder()
                             .mediaType(MediaType.APPLICATION_JSON_VALUE)
                             .schema(schemaBuilder().implementation(ApplicationDTOResponse.class))))
             .response(
                 responseBuilder()
-                    .responseCode(HttpStatus.BAD_REQUEST.name())
+                    .responseCode(RestConstants.StatusCodeInt.BAD_REQUEST)
                     .content(
                         contentBuilder()
                             .mediaType(MediaType.APPLICATION_JSON_VALUE)
-                            .schema(schemaBuilder().implementation(ErrorResponseDTO.class))));
+                            .schema(schemaBuilder().implementation(ErrorResponseDTO.class))))
+            .response(
+                responseBuilder()
+                    .responseCode(RestConstants.StatusCodeInt.SERVER_ERROR)
+                    .content(
+                        contentBuilder()
+                            .mediaType(MediaType.APPLICATION_JSON_VALUE)
+                            .schema(schemaBuilder().implementation(ErrorResponse.class))));
   }
 
   public static Consumer<Builder> getApplicationsForManualReview() {
@@ -71,18 +78,25 @@ public class ApplicationAPIDocs {
                                     .implementation(GetApplicationFilteredCommand.class))))
             .response(
                 responseBuilder()
-                    .responseCode(HttpStatus.OK.name())
+                    .responseCode(RestConstants.StatusCodeInt.FOUND)
                     .content(
                         contentBuilder()
                             .mediaType(MediaType.APPLICATION_JSON_VALUE)
                             .schema(schemaBuilder().implementation(ApplicationUserSummary.class))))
             .response(
                 responseBuilder()
-                    .responseCode(HttpStatus.BAD_REQUEST.name())
+                    .responseCode(RestConstants.StatusCodeInt.BAD_REQUEST)
                     .content(
                         contentBuilder()
                             .mediaType(MediaType.APPLICATION_JSON_VALUE)
-                            .schema(schemaBuilder().implementation(ErrorResponseDTO.class))));
+                            .schema(schemaBuilder().implementation(ErrorResponseDTO.class))))
+            .response(
+                responseBuilder()
+                    .responseCode(RestConstants.StatusCodeInt.SERVER_ERROR)
+                    .content(
+                        contentBuilder()
+                            .mediaType(MediaType.APPLICATION_JSON_VALUE)
+                            .schema(schemaBuilder().implementation(ErrorResponse.class))));
   }
 
   public static Consumer<Builder> patchApplicationStatus() {
@@ -103,14 +117,14 @@ public class ApplicationAPIDocs {
             .response(responseBuilder().responseCode(HttpStatus.NO_CONTENT.name()))
             .response(
                 responseBuilder()
-                    .responseCode(HttpStatus.BAD_REQUEST.name())
+                    .responseCode(RestConstants.StatusCodeInt.BAD_REQUEST)
                     .content(
                         contentBuilder()
                             .mediaType(MediaType.APPLICATION_JSON_VALUE)
                             .schema(schemaBuilder().implementation(ErrorResponseDTO.class))))
             .response(
                 responseBuilder()
-                    .responseCode(HttpStatus.INTERNAL_SERVER_ERROR.name())
+                    .responseCode(RestConstants.StatusCodeInt.SERVER_ERROR)
                     .content(
                         contentBuilder()
                             .mediaType(MediaType.APPLICATION_JSON_VALUE)

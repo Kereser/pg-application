@@ -69,7 +69,7 @@ public class Handler {
         .doOnSubscribe(sub -> log.info(LOG_GET_SUBSCRIBE))
         .doOnSuccess(res -> log.info(LOG_GET_SUCCESS, res))
         .doOnError(err -> log.error(LOG_GET_ERROR, err.getMessage()))
-        .flatMap(res -> ServerResponse.ok().bodyValue(res));
+        .flatMap(res -> ServerResponse.status(HttpStatus.FOUND).bodyValue(res));
   }
 
   public Mono<ServerResponse> listenPatchApplicationWithStatus(ServerRequest req) {
