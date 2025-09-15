@@ -9,9 +9,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-class PostgreSQLConnectionPoolTest {
+class PostgresSQLConnectionPoolTest {
 
-  @InjectMocks private PostgreSQLConnectionPool connectionPool;
+  @InjectMocks private PostgresSQLConnectionPool connectionPool;
 
   @Mock private PostgresqlConnectionProperties properties;
 

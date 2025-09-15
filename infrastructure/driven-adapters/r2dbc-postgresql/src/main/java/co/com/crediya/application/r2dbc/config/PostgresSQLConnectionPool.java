@@ -2,6 +2,8 @@ package co.com.crediya.application.r2dbc.config;
 
 import java.time.Duration;
 
+import io.r2dbc.postgresql.client.SSLMode;
+import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -9,17 +11,22 @@ import io.r2dbc.pool.ConnectionPool;
 import io.r2dbc.pool.ConnectionPoolConfiguration;
 import io.r2dbc.postgresql.PostgresqlConnectionConfiguration;
 import io.r2dbc.postgresql.PostgresqlConnectionFactory;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 
 @Configuration
-public class PostgreSQLConnectionPool {
-  /* Change these values for your project */
+@AllArgsConstructor
+public class PostgresSQLConnectionPool {
   public static final int INITIAL_SIZE = 12;
   public static final int MAX_SIZE = 15;
   public static final int MAX_IDLE_TIME = 30;
-  public static final int DEFAULT_PORT = 5432;
+
+  private final Environment env;
 
   @Bean
   public ConnectionPool getConnectionConfig(PostgresqlConnectionProperties properties) {
+    SSLMode sslMode = env.acceptsProfiles(Profiles.of("prod")) ? SSLMode.REQUIRE : SSLMode.DISABLE;
+
     PostgresqlConnectionConfiguration dbConfiguration =
         PostgresqlConnectionConfiguration.builder()
             .host(properties.host())
@@ -28,6 +35,7 @@ public class PostgreSQLConnectionPool {
             .schema(properties.schema())
             .username(properties.username())
             .password(properties.password())
+            .sslMode(sslMode)
             .build();
 
     ConnectionPoolConfiguration poolConfiguration =
